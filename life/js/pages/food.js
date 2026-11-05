@@ -164,7 +164,7 @@ function derivedProduct(m) {
 
 /** Запрос без окончаний: «бананы» → «банан», «котлеты куриные» → «котлет курин» (как в matchFood). */
 function stemQuery(q) {
-  return String(q || '').split(' ').map(w => (w.length > 4 ? w.replace(/(ами|ями|ов|ев|ей|ы|и|а|я|у|ю|е|о)$/, '') : w)).join(' ');
+  return String(q || '').split(' ').map(w => (w.length > 4 ? w.replace(/(ами|ями|ые|ие|ая|яя|ое|ее|ый|ий|ой|ов|ев|ей|ы|и|а|я|у|ю|е|о)$/, '') : w)).join(' ');
 }
 
 /** Убрать из результатов встроенные продукты, которые уже есть в «моих» (тот же id). */
@@ -340,7 +340,7 @@ function summaryHtml(tot, goals, date, t) {
       ${MACROS.map(m => {
         const v = Number(tot[m.key]) || 0;
         const gm = Number(goals[m.key]) || 0;
-        return html`<div class="fd-macro" style="--mc:${m.color}">
+        return html`<div class="fd-macro ${gm && v > gm * 1.1 ? 'over' : ''}" style="--mc:${m.color}">
           <div class="fd-macro-head"><span class="fd-macro-name">${m.label}</span></div>
           <div class="fd-macro-val num"><b>${fmtNum(v)}</b>${gm ? html`<span> / ${fmtNum(gm)} г</span>` : html`<span> г</span>`}</div>
           ${bar({ value: v, max: gm || Math.max(v, 1), color: m.color })}
@@ -496,7 +496,7 @@ function weightHtml(date) {
       <circle class="fd-spark-dot" cx="${spark.last[0]}" cy="${spark.last[1]}" r="4"/>
     </svg>
     <div class="fd-spark-axis tiny muted"><span>30 дней назад</span><span>${fmtNum(spark.min, 1)}–${fmtNum(spark.max, 1)} кг</span></div>`
-    : html`<p class="muted small">Ещё одно взвешивание — и появится график.</p>`}
+    : html`<p class="muted small fd-weight-hint">Ещё одно взвешивание — и появится график.</p>`}
   </section>`;
 }
 
@@ -1122,7 +1122,7 @@ export function openFoodSearch(opts = {}) {
     const q = st.q.trim();
     const clear = root.querySelector('.fs-clear');
     if (clear) clear.hidden = !q;
-    box.innerHTML = q ? resultsHtml(q) : tabsHtml();
+    box.innerHTML = String(q ? html`${resultsHtml(q)}` : tabsHtml());
   }
 
   function tabsHtml() {

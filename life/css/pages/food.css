@@ -122,6 +122,7 @@
 .p-food .fd-macro-val { font-size: 13px; color: var(--muted); white-space: nowrap; }
 .p-food .fd-macro-val b { font-size: 16px; font-weight: 600; color: var(--text); }
 .p-food .fd-macro .progress { height: 6px; }
+.p-food .fd-macro.over .fd-macro-val b { color: var(--warn); }
 
 /* ---- Вода */
 .p-food .fd-water-total { font-size: 13.5px; color: var(--muted); white-space: nowrap; }
@@ -277,6 +278,7 @@
 .p-food .fd-spark-dot { fill: var(--accent); stroke: var(--surface); stroke-width: 2.5; }
 .p-food .fd-spark-axis { display: flex; justify-content: space-between; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .p-food .fd-weight-empty { line-height: 1.5; }
+.p-food .fd-weight-hint { margin-top: 10px; }
 
 /* ===================================================================== */
 /* Шторки раздела                                                        */
@@ -408,7 +410,8 @@
   vertical-align: 2px;
 }
 .sh-food .fs-star { color: var(--muted); }
-.sh-food .fs-star.on { color: var(--warn); }
+.sh-food .fs-star.on, .sh-food .icon-btn.fs-star.on { color: var(--warn); background: transparent; }
+.sh-food .icon-btn.bordered.fs-star.on { background: var(--warn-soft); border-color: transparent; }
 .sh-food .fs-star.on .ico path { fill: currentColor; }
 .sh-fs .fs-edit { color: var(--muted); }
 .sh-fs .fs-edit:hover, .sh-food .fs-star:hover { color: var(--text); }

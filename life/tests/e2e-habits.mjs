@@ -206,11 +206,11 @@ async function checkFormGood(h) {
 
   // − / +
   const c = card(h, w.id);
-  for (let i = 0; i < 3; i++) { await c.locator('[data-act="inc"]').click(); await h.settle(140); }
+  for (let i = 0; i < 3; i++) { await tap(h, c.locator('[data-act="inc"]')); await h.settle(140); }
   let val = (await c.locator('.hb-step-val').textContent()).replace(/\s+/g, ' ').trim();
   expect(h, /^3 \/ 8 стаканов$/.test(val), `счётчик: «${val}»`);
   expect(h, (await todayLogs(h, w.id, 'done')).length === 3, 'плюс не записал 3 отметки');
-  await c.locator('[data-act="dec"]').click();
+  await tap(h, c.locator('[data-act="dec"]'));
   await h.settle(200);
   val = (await c.locator('.hb-step-val').textContent()).replace(/\s+/g, ' ').trim();
   expect(h, /^2 \/ 8/.test(val), `после минуса: «${val}»`);
@@ -227,7 +227,7 @@ async function checkFormGood(h) {
 /** Шаблоны: «Курение» из пустого состояния; смена вида; «Энергетики» (лимит). */
 async function checkTemplates(h) {
   await wipe(h);
-  await h.page.locator('.p-habits [data-act="tpl"][data-kind="bad"]', { hasText: 'Курение' }).click();
+  await tap(h, h.page.locator('.p-habits [data-act="tpl"][data-kind="bad"]', { hasText: 'Курение' }));
   await waitSheet(h, 'sh-habit-form');
   const f = topSheet(h);
   const v = await f.evaluate(el => ({
@@ -296,18 +296,20 @@ async function checkTemplates(h) {
 /** Полезная с целью 1: большая галочка. */
 async function checkToggle(h) {
   const z = await createViaStore(h, { name: 'Зарядка', emoji: '🏃', kind: 'good', target: 1, unit: 'раз', days: [1, 2, 3, 4, 5, 6, 7] });
+  // «Вода» (цель 8) — для вкладок и быстрой отметки (после шаблонов список был очищен).
+  await createViaStore(h, { name: 'Вода', emoji: '💧', kind: 'good', target: 8, unit: 'стакан', days: [1, 2, 3, 4, 5, 6, 7], color: '#5fc7e8', order: 1 });
   await h.goto('habits');
   const btn = () => card(h, z.id).locator('[data-act="toggle"]');
-  await btn().click();
+  await tap(h, btn());
   await h.settle(250);
   expect(h, (await todayLogs(h, z.id, 'done')).length === 1, 'галочка: отметка не записалась');
   expect(h, await btn().evaluate(b => b.classList.contains('on') && b.getAttribute('aria-pressed') === 'true'), 'галочка не включилась');
   const dot = await card(h, z.id).locator('.hb-day.is-today').getAttribute('class');
   expect(h, /\bdone\b/.test(dot), `точка сегодня: ${dot}`);
-  await btn().click();
+  await tap(h, btn());
   await h.settle(250);
   expect(h, (await todayLogs(h, z.id, 'done')).length === 0, 'галочка: снятие не удалило запись');
-  await btn().click();
+  await tap(h, btn());
   await h.settle(250);
 }
 
@@ -319,7 +321,7 @@ async function checkCraving(h) {
   const c = card(h, s.id);
   const clock = (await c.locator('.hb-clock').textContent()).replace(/\s+/g, ' ').trim();
   expect(h, /^(\d+ д )?(\d+ ч )?\d+ мин$/.test(clock), `счётчик: «${clock}»`);
-  await c.locator('[data-act="crave"]').click();
+  await tap(h, c.locator('[data-act="crave"]'));
   await waitSheet(h, 'sh-habit-crave');
   expect(h, (await todayLogs(h, s.id, 'craving')).length === 1, '«Хочется» не записало тягу');
   const sh = topSheet(h);
@@ -341,7 +343,7 @@ async function checkCraving(h) {
   await h.settle(300);
   expect(h, (await todayLogs(h, s.id, 'craving')).length === 0, '«Отменить отметку» не удалило тягу');
   // Второй раз — «Отпустило» оставляет запись; на карточке «удержался 1 раз».
-  await c.locator('[data-act="crave"]').click();
+  await tap(h, c.locator('[data-act="crave"]'));
   await waitSheet(h, 'sh-habit-crave');
   await topSheet(h).locator('[data-act="ok"]').click();
   await h.settle(350);
@@ -364,7 +366,7 @@ async function checkSlip(h) {
   const c = card(h, s.id);
   const before = (await c.locator('.hb-clock').textContent()).replace(/\s+/g, ' ');
   expect(h, /^3 д/.test(before.trim()), `счётчик до срыва: «${before}»`);
-  await c.locator('[data-act="slip"]').click();
+  await tap(h, c.locator('[data-act="slip"]'));
   await waitSheet(h, 'sh-habit-slip');
   const sh = topSheet(h);
   const alert = (await sh.locator('.alert').textContent().catch(() => '')).replace(/\s+/g, ' ');
@@ -423,15 +425,15 @@ async function checkLimit(h) {
   const c = card(h, e.id);
   const lvl = () => c.getAttribute('class').then(x => /lvl-(\w+)/.exec(x)?.[1]);
   expect(h, (await lvl()) === 'ok', `уровень 0/2: ${await lvl()}`);
-  await c.locator('[data-act="lim-inc"]').click();
+  await tap(h, c.locator('[data-act="lim-inc"]'));
   await h.settle(200);
   expect(h, (await lvl()) === 'ok', `уровень 1/2: ${await lvl()}`);
   const tt = await toasts(h);
   expect(h, tt.some(t => /Энергетики: 1 из 2 сегодня, можно ещё 1/.test(t) && /Отменить/.test(t)), `тост лимита: ${tt}`);
-  await c.locator('[data-act="lim-inc"]').click();
+  await tap(h, c.locator('[data-act="lim-inc"]'));
   await h.settle(200);
   expect(h, (await lvl()) === 'warn', `уровень 2/2: ${await lvl()}`);
-  await c.locator('[data-act="lim-inc"]').click();
+  await tap(h, c.locator('[data-act="lim-inc"]'));
   await h.settle(200);
   expect(h, (await lvl()) === 'bad', `уровень 3/2: ${await lvl()}`);
   const val = (await c.locator('.hb-lim-val').textContent()).replace(/\s+/g, ' ').trim();
@@ -440,7 +442,7 @@ async function checkLimit(h) {
   expect(h, /сверх лимита: \+1 банка/.test(sub), `подпись перебора: «${sub}»`);
   await h.clearToasts();
   await shot(h, 'limit-over');
-  await c.locator('[data-act="lim-dec"]').click();
+  await tap(h, c.locator('[data-act="lim-dec"]'));
   await h.settle(200);
   expect(h, (await todayLogs(h, e.id, 'slip')).length === 2, '−1 не убрал отметку');
   expect(h, (await lvl()) === 'warn', `после −1: ${await lvl()}`);
@@ -452,7 +454,7 @@ async function checkDetails(h) {
   const z = await habitBy(h, 'Зарядка');
   if (!z) return h.error('habits', 'нет «Зарядка» для карточки');
   await h.goto('habits');
-  await card(h, z.id).locator('[data-act="open"]').click();
+  await tap(h, card(h, z.id).locator('[data-act="open"]'));
   await waitSheet(h, 'sh-habit');
   expect(h, (await sheetTitle(h)) === 'Зарядка', `заголовок карточки: «${await sheetTitle(h)}»`);
   expect(h, (await hash(h)).includes(`habit=${z.id}`), `адрес без habit: ${await hash(h)}`);
@@ -527,7 +529,7 @@ async function checkArchiveDelete(h) {
   const z = await habitBy(h, 'Утренняя зарядка');
   if (!z) return;
   await h.goto('habits');
-  await card(h, z.id).locator('[data-act="open"]').click();
+  await tap(h, card(h, z.id).locator('[data-act="open"]'));
   await waitSheet(h, 'sh-habit');
   await topSheet(h).locator('[data-act="d-archive"]').click();
   await h.settle(450);
@@ -545,7 +547,7 @@ async function checkArchiveDelete(h) {
   await h.settle(300);
   expect(h, (await card(h, z.id).count()) === 1, '«Вернуть» не вернуло привычку');
   // Удаление: отмена в подтверждении → ничего; «Удалить» → надгробие, записи остаются; «Отменить» → вернулась.
-  await card(h, z.id).locator('[data-act="open"]').click();
+  await tap(h, card(h, z.id).locator('[data-act="open"]'));
   await waitSheet(h, 'sh-habit');
   await topSheet(h).locator('[data-act="d-delete"]').click();
   await waitSheet(h, 'sheet-confirm');
@@ -694,7 +696,7 @@ async function checkDemo(h) {
 
   // Карточки «бросаю» и «ограничиваю».
   for (const [id, name] of [['demo_hb_smoking', 'details-quit'], ['demo_hb_energy', 'details-limit']]) {
-    await card(h, id).locator('[data-act="open"]').click();
+    await tap(h, card(h, id).locator('[data-act="open"]'));
     await waitSheet(h, 'sh-habit');
     const d = await topSheet(h).evaluate(el => ({
       kpis: [...el.querySelectorAll('.kpi')].map(k => k.innerText.replace(/\s+/g, ' ').trim()),
@@ -722,7 +724,7 @@ async function checkFromToday(h) {
   if (await crave.count()) {
     const id = await crave.getAttribute('data-id');
     const before = (await todayLogs(h, id, 'craving')).length;
-    await crave.click();
+    await tap(h, crave);
     await h.settle(400);
     expect(h, (await todayLogs(h, id, 'craving')).length === before + 1, '«Сегодня» → «Хочется» не записало');
     const tt = await toasts(h);
@@ -734,7 +736,7 @@ async function checkFromToday(h) {
   await h.clearToasts();
   const slip = h.page.locator('.p-today [data-act="habit-slip"]').first();
   if (await slip.count()) {
-    await slip.click();
+    await tap(h, slip);
     await h.settle(400);
     const tt = await toasts(h);
     expect(h, tt.length === 1 && /из/.test(tt[0]) && /Отменить/.test(tt[0]), `«Сегодня» → +1: ${tt}`);
@@ -750,7 +752,7 @@ async function checkLight(h) {
   await h.goto('habits');
   await h.settle(300);
   await shot(h, 'light-demo');
-  await card(h, 'demo_hb_smoking').locator('[data-act="open"]').click();
+  await tap(h, card(h, 'demo_hb_smoking').locator('[data-act="open"]'));
   await waitSheet(h, 'sh-habit');
   await shot(h, 'light-details');
   await closeTop(h);
