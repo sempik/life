@@ -948,9 +948,12 @@ async function logHabit(id, type) {
   if (!h) return;
   const today = msToYmd(Date.now());
   const f = await pageFn('habits', 'logHabit');
+  const lastToast = latestToast();
   const rec = f
     ? await f(id, type, 1, today)
     : store.put('habitLogs', { habitId: id, date: today, time: nowHm(), type, count: 1, note: '' });
+  // Раздел «Привычки» сам показал тост — свой не дублируем.
+  if (f && latestToast() !== lastToast) return;
   const undo = rec?.id ? { action: 'Отменить', onAction: () => store.remove('habitLogs', rec.id) } : {};
   const name = h.name || 'Привычка';
   const p = dayProgress(h, store.all('habitLogs').filter(l => l.habitId === id), today);
@@ -964,6 +967,8 @@ async function logHabit(id, type) {
     toast(p.complete && p.done === p.target ? `${name}: цель на сегодня выполнена 🎉` : `${name}: ${fmtNum(p.done)} из ${fmtNum(p.target)}`, undo);
   }
 }
+
+const latestToast = () => document.getElementById('toasts')?.lastElementChild || null;
 
 function undoHabit(id) {
   const today = msToYmd(Date.now());
