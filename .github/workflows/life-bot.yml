@@ -1,0 +1,62 @@
+name: life-bot
+
+# Бот Life (.github/scripts/life-bot.mjs): напоминания через Web Push и Telegram, когда
+# приложение закрыто, команды Telegram (/today, /water, /eat, /task …) и проверка сайтов
+# с расписанием. Данные — в секретном gist пользователя, бот только читает и пишет его.
+#
+# Включение (подробно — life/README.md и в приложении: Настройки → Бот):
+#   переменная репозитория LIFE_BOT = on        (без неё job пропускается — форкам ничего не нужно)
+#   секрет LIFE_GIST_TOKEN                      токен GitHub с правом gist
+#   секрет LIFE_PASSPHRASE                      только если включено шифрование
+#   необязательно: переменная LIFE_GIST_ID, секрет TG_BOT_TOKEN, переменная TG_CHAT_ID
+#                  (иначе gist ищется по токену, а Telegram берётся из life-config.json)
+#
+# Расписание GitHub не гарантирует точность: запуски по cron часто опаздывают на 5–15 минут,
+# а при высокой нагрузке бывают пропуски. Поэтому бот отправляет напоминания до 11 минут
+# заранее (текст «через N мин» считается в момент отправки) и догоняет пропущенное за час.
+# В публичном репозитории без коммитов 60 дней GitHub сам выключает scheduled-workflows:
+# придёт письмо, включить обратно — Actions → life-bot → «Enable workflow».
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: life-bot
+  cancel-in-progress: false
+
+jobs:
+  bot:
+    if: vars.LIFE_BOT == 'on'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            life/js/lib
+            .github/scripts
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Ставится рядом со скриптом, чтобы import('web-push') нашёл модуль.
+      # Не поставился — бот всё равно работает (Telegram, источники), только без push.
+      - name: Install web-push
+        continue-on-error: true
+        run: npm i --no-save --no-package-lock --no-audit --no-fund --prefix .github/scripts web-push@3.6.7
+
+      - name: Run bot
+        env:
+          LIFE_GIST_TOKEN: ${{ secrets.LIFE_GIST_TOKEN }}
+          LIFE_GIST_ID: ${{ vars.LIFE_GIST_ID }}
+          LIFE_PASSPHRASE: ${{ secrets.LIFE_PASSPHRASE }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ vars.TG_CHAT_ID }}
+        run: node .github/scripts/life-bot.mjs

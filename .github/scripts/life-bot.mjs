@@ -38,7 +38,7 @@ import { portion, dayTotals, guessMeal, fmtNum, MEALS } from '../../life/js/lib/
 import { dayProgress, streak, cleanTime, limitStatus, todaySummary, isScheduled } from '../../life/js/lib/habits.js';
 import { deepMerge, escapeHtml, hashStr, isObj, norm, sortBy } from '../../life/js/lib/util.js';
 import {
-  addDays, fmtDate, fmtDuration, fmtRelative, isHm, isYmd, msToHm, msToYmd, plural, pluralN,
+  addDays, fmtDate, fmtDuration, fmtRelative, isHm, isYmd, msToHm, msToYmd, pluralN,
   weekIndex, weekParity,
 } from '../../life/js/lib/dates.js';
 
@@ -104,7 +104,6 @@ export const BOT_DEFAULT_SETTINGS = {
 const MEAL_LABEL = Object.fromEntries(MEALS.map(m => [m.id, m.label]));
 const PRIORITY_MARK = { 1: ' ❗', 2: ' 🔥' };
 const DAYS_FORMS = ['день', 'дня', 'дней'];
-const EVENTS_FORMS = ['событие', 'события', 'событий'];
 const CHANGES_FORMS = ['изменение', 'изменения', 'изменений'];
 
 // ---------------------------------------------------------------------------
@@ -196,12 +195,13 @@ function makeLogger(log, env) {
   };
   return {
     redact,
-    addSecret(value) {
+    /** mask — попросить GitHub прятать значение и в выводе дочерних процессов (для секретов из gist). */
+    addSecret(value, { mask = false } = {}) {
       const s = str(value);
       if (s.length < 6 || secrets.has(s)) return;
       secrets.add(s);
-      // GitHub сам прячет secrets.*, но токен Telegram из gist и VAPID-ключ ему неизвестны.
-      if (inActions) {
+      // secrets.* GitHub прячет сам, а токен Telegram и VAPID-ключ из gist ему неизвестны.
+      if (inActions && mask) {
         try { log(`::add-mask::${s}`); } catch { /* ignore */ }
       }
     },
@@ -414,12 +414,12 @@ async function loadFiles(ctx) {
   } else {
     ctx.config = normConfig(null);
   }
-  if (ctx.config.vapid) ctx.out.addSecret(ctx.config.vapid.privateKey);
+  if (ctx.config.vapid) ctx.out.addSecret(ctx.config.vapid.privateKey, { mask: true });
 
   // Telegram: переменные окружения важнее конфига.
   ctx.tg.token = str(ctx.env.TG_BOT_TOKEN) || str(ctx.config.telegram?.token);
   ctx.tg.chatId = str(ctx.env.TG_CHAT_ID) || str(ctx.config.telegram?.chatId);
-  ctx.out.addSecret(ctx.tg.token);
+  ctx.out.addSecret(ctx.tg.token, { mask: !str(ctx.env.TG_BOT_TOKEN) });
 
   // Снимки приложения (до слияния) — чтобы при равном fetchedAt предпочесть свой снимок.
   ctx.appSnapshots = isObj(data.snapshots) ? data.snapshots : {};
@@ -664,11 +664,12 @@ export function parseCommand(text) {
   const m = /^\/([\p{L}\d_]+)(?:@\w+)?(?:\s+([\s\S]*))?$/u.exec(t);
   if (m) {
     const word = m[1].toLowerCase().replace(/ё/g, 'е');
-    return { cmd: COMMAND_ALIASES[word] || `?${word}`, args: str(m[2]) };
+    return { cmd: Object.hasOwn(COMMAND_ALIASES, word) ? COMMAND_ALIASES[word] : `?${word}`, args: str(m[2]) };
   }
   const w = /^([\p{L}]+)(?:[\s,:]+([\s\S]*))?$/u.exec(t);
   if (w) {
-    const cmd = COMMAND_ALIASES[w[1].toLowerCase().replace(/ё/g, 'е')];
+    const word = w[1].toLowerCase().replace(/ё/g, 'е');
+    const cmd = Object.hasOwn(COMMAND_ALIASES, word) ? COMMAND_ALIASES[word] : '';
     const args = str(w[2]);
     if (cmd && /[а-я]/i.test(w[1]) && cmd !== 'start' && !(BARE_ONLY.has(cmd) && args)) return { cmd, args };
   }
@@ -789,11 +790,12 @@ async function handleMessage(ctx, msg, repliedStrangers) {
   // Время сообщения (бот мог запуститься позже): записи датируются моментом отправки.
   const sentMs = Number(msg.date) > 0 ? Math.min(Number(msg.date) * 1000, ctx.now) : ctx.now;
   const m = { ctx, msg, args, at: sentMs, day: msToYmd(sentMs), time: msToHm(sentMs), seq: 0 };
-  ctx.out.info(`Telegram: команда ${COMMANDS[cmd] ? `/${cmd}` : 'не распознана'}`);
+  const handler = Object.hasOwn(COMMANDS, cmd) ? COMMANDS[cmd] : null;
+  ctx.out.info(`Telegram: команда ${handler ? `/${cmd}` : 'не распознана'}`);
 
   let reply;
   if (!text) reply = 'Я понимаю только текст. Команды — /help';
-  else if (COMMANDS[cmd]) reply = await COMMANDS[cmd](m);
+  else if (handler) reply = await handler(m);
   else reply = SHORT_HELP;
   if (reply) await tgSend(ctx, chatId, reply);
 }
@@ -808,16 +810,23 @@ function recordId(m) {
   return Math.floor(m.at).toString(36) + hashStr(salt).slice(-8);
 }
 
-/** Новая запись: в inbox (для приложения) и сразу в данные (для отчётов и напоминаний этого запуска). */
+/**
+ * Новая (или обновлённая) запись: в inbox (для приложения) и сразу в данные (для отчётов
+ * и напоминаний этого запуска). Приложение сливает inbox по LWW (updatedAt), поэтому у новой
+ * версии updatedAt строго больше прежней, а в inbox остаётся одна версия на id.
+ */
 function addRecord(m, coll, fields, { id, createdAt } = {}) {
   const { ctx } = m;
   const { deleted: _deleted, ...rest } = fields;
-  const rec = { ...rest, id: id || recordId(m), createdAt: createdAt ?? ctx.now, updatedAt: ctx.now };
-  ctx.bot.inbox.push({ coll, rec, at: ctx.now });
+  const recId = String(id || recordId(m));
   const list = ctx.data.collections[coll] || (ctx.data.collections[coll] = []);
-  const i = list.findIndex(r => String(r.id) === String(rec.id));
+  const i = list.findIndex(r => String(r.id) === recId);
+  const updatedAt = Math.max(ctx.now, i >= 0 ? num(list[i].updatedAt) + 1 : 0);
+  const rec = { ...rest, id: recId, createdAt: createdAt ?? ctx.now, updatedAt };
   if (i >= 0) list[i] = rec;
   else list.push(rec);
+  ctx.bot.inbox = ctx.bot.inbox.filter(x => !(x.coll === coll && String(x.rec.id) === recId));
+  ctx.bot.inbox.push({ coll, rec, at: ctx.now });
   ctx.stats.records++;
   return rec;
 }
@@ -1265,8 +1274,10 @@ async function processSources(ctx) {
       const error = str(next.error) || 'Не удалось загрузить';
       ctx.softError(`Источник «${name}»: ${error}`, `${label}: не загрузился${ctx.publicLog ? ' — подробности в приложении' : ` (${error})`}`);
       if (prev?.ok) {
-        // Удачный снимок не затираем (по нему строятся расписание и напоминания) — только отмечаем ошибку.
-        ctx.bot.snapshots[id] = { ...prev, lastError: error, lastErrorAt: ctx.now };
+        // Удачный снимок не затираем (по нему строятся расписание и напоминания) — только отмечаем
+        // ошибку. fetchedAt + 1 мс: снимки сливаются по fetchedAt, иначе приложение оставило бы
+        // свою копию без отметки об ошибке.
+        ctx.bot.snapshots[id] = { ...prev, fetchedAt: num(prev.fetchedAt) + 1, lastError: error, lastErrorAt: ctx.now };
       } else {
         ctx.bot.snapshots[id] = { ...next, error };
         ctx.data.snapshots[id] = ctx.bot.snapshots[id];
