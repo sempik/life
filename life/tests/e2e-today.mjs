@@ -218,6 +218,20 @@ async function checkDemoActions(h) {
   await h.page.locator(`.td-habits-card .check[data-id="${hid}"]`).click();
   await h.settle(400);
   if ((await logsToday(hid, 'done')).length !== 0) h.error('today', 'привычка: снятие отметки не удалило запись');
+  const ring = await h.evaluate(() => !!document.querySelector('.p-today :focus-visible'));
+  if (ring) h.error('today', 'после нажатия мышью осталась рамка фокуса');
+
+  // Клавиатура: пробел на чекбоксе привычки — после перерисовки фокус на новой кнопке.
+  await h.page.keyboard.press('Shift');
+  await h.page.locator(`.td-habits-card .check[data-id="${hid}"]`).focus();
+  await h.page.keyboard.press('Space');
+  await h.settle(400);
+  const kb = await h.evaluate(() => ({ act: document.activeElement?.dataset?.act, id: document.activeElement?.dataset?.id }));
+  if (kb.id !== hid || kb.act !== 'habit-undo') h.error('today', `клавиатура: фокус после перерисовки ${JSON.stringify(kb)}`);
+  if ((await logsToday(hid, 'done')).length !== 1) h.error('today', 'клавиатура: пробел не отметил привычку');
+  await h.page.keyboard.press('Space');
+  await h.settle(400);
+  if ((await logsToday(hid, 'done')).length !== 0) h.error('today', 'клавиатура: повторный пробел не снял отметку');
 
   // Лимит: +1 → запись срыва, тост с «Отменить» → запись удалена.
   const lid = 'demo_hb_energy';
@@ -225,7 +239,7 @@ async function checkDemoActions(h) {
   await h.page.locator(`.td-habits-card [data-act="habit-slip"][data-id="${lid}"]`).click();
   await h.settle(400);
   if ((await logsToday(lid, 'slip')).length !== before + 1) h.error('today', 'лимит: +1 не записал срыв');
-  const sub = await h.page.locator(`.td-habits-card [data-act="habit-slip"][data-id="${lid}"]`).locator('xpath=ancestor::div[contains(@class,"td-habit")]').textContent();
+  const sub = await h.page.locator(`.td-habits-card .td-habit:has([data-act="habit-slip"][data-id="${lid}"])`).textContent();
   if (!new RegExp(`${before + 1} / 1`).test(sub)) h.error('today', `лимит: в карточке «${sub.trim().replace(/\s+/g, ' ')}»`);
   await shot(h, 'habit-slip');
   const undo = h.page.locator('#toasts .toast-action');
@@ -238,7 +252,7 @@ async function checkDemoActions(h) {
 
   // Бросаю: «Хочется» → запись craving, чистое время не сбрасывается.
   const qid = 'demo_hb_smoking';
-  const clean1 = await h.page.locator(`.td-habits-card [data-act="habit-crave"][data-id="${qid}"]`).locator('xpath=ancestor::div[contains(@class,"td-habit")]').locator('.td-clean b').textContent();
+  const clean1 = await h.page.locator(`.td-habits-card .td-habit:has([data-act="habit-crave"][data-id="${qid}"]) .td-clean b`).textContent();
   const cBefore = (await logsToday(qid, 'craving')).length;
   await h.page.locator(`.td-habits-card [data-act="habit-crave"][data-id="${qid}"]`).click();
   await h.settle(400);

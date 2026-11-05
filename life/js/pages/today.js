@@ -285,10 +285,13 @@ function layout(root) {
 
 const focusId = el => el.dataset.id || el.dataset.key || el.dataset.ml || el.dataset.meal || el.dataset.date || '';
 
+/** Фокус клавиатуры (только :focus-visible — мышь и касания фокус не «тащат»). */
 function rememberFocus(root) {
   const a = document.activeElement;
   if (!a || a === root || !root.contains(a) || !a.dataset?.act) return null;
-  return { act: a.dataset.act, id: focusId(a) };
+  let visible = true;
+  try { visible = a.matches(':focus-visible'); } catch { /* старый браузер */ }
+  return visible ? { act: a.dataset.act, id: focusId(a) } : null;
 }
 
 function restoreFocus(root, f) {
@@ -478,11 +481,13 @@ function liveBlock(o, ctx, more) {
 
 function nextBlock(o, ctx) {
   const type = o.type || 'other';
-  const mins = Math.max(1, Math.round((o.startMs - ctx.now) / 60000));
-  return html`<div class="td-blk td-next type-${type}"${tcStyle(o)} data-act="occ" data-key="${occKey(o)}" role="button" tabindex="0" aria-label="Далее: ${o.title}, через ${fmtDuration(mins)}">
-    <div class="td-blk-label"><span class="dot"></span>Далее · ${TYPE_LABEL[type] || 'событие'}<span class="td-countdown">через ${fmtDuration(mins)}</span></div>
+  // < 12 ч — «через 1 ч 20 мин», дальше — «завтра в 09:00» (тогда день в строке ниже не повторяем).
+  const rel = fmtRelative(Math.max(o.startMs, ctx.now + 60e3), ctx.now);
+  const relIsDuration = rel.startsWith('через');
+  return html`<div class="td-blk td-next type-${type}"${tcStyle(o)} data-act="occ" data-key="${occKey(o)}" role="button" tabindex="0" aria-label="Далее: ${o.title}, ${rel}">
+    <div class="td-blk-label"><span class="dot"></span>Далее · ${TYPE_LABEL[type] || 'событие'}<span class="td-countdown">${rel}</span></div>
     <div class="td-blk-title">${o.title}</div>
-    <div class="td-blk-meta">${occMeta(o, ctx, { withDay: true })}</div>
+    <div class="td-blk-meta">${occMeta(o, ctx, { withDay: relIsDuration })}</div>
     ${o.external ? html`<div><span class="badge td-src">${icon('globe', 13)}${sourceName(o.sourceId)}</span></div>` : ''}
     ${joinBtn(o)}
   </div>`;
@@ -692,7 +697,7 @@ function badItem(it, logs, ctx) {
       <span class="item-icon td-emoji" aria-hidden="true">${h.emoji || '🚫'}</span>
       <div class="item-main">
         <span class="item-title">${h.name || 'Привычка'}</span>
-        <span class="item-sub td-hsub"><span class="td-clean">${icon('clock', 13)}<span>без срывов <b class="num">${cleanLabel(ct)}</b></span></span>${sv.money > 0 ? html`<span class="td-saved">${icon('wallet', 13)}${fmtMoney(sv.money)}</span>` : ''}</span>
+        <span class="item-sub td-hsub"><span class="td-clean">без срывов <b class="num">${cleanLabel(ct)}</b></span>${sv.money > 0 ? html`<span class="td-saved">${icon('wallet', 13)}${fmtMoney(sv.money)}</span>` : ''}</span>
       </div>
       <div class="item-side">
         <button type="button" class="btn sm td-crave" data-act="habit-crave" data-id="${h.id}" title="Хотелось, но удержался — это победа">Хочется</button>
@@ -752,7 +757,7 @@ function foodCard(ctx) {
       ${ring({ value: tot.water, max: wGoal, size: 58, stroke: 6, color: 'var(--info)', label: fmtNum(tot.water / 1000, 2), sub: 'л' })}
       <div class="td-water-main">
         <div class="td-water-title">Вода</div>
-        <div class="td-water-sub"><span class="num">${fmtNum(tot.water)}${wGoal ? ` из ${fmtNum(wGoal)}` : ''} мл</span>${pace.behind >= 250 ? html`<span class="text-warn"> · отстаёшь на ${fmtNum(Math.round(pace.behind / 50) * 50)}</span>` : wGoal && tot.water >= wGoal ? html`<span class="text-ok"> · норма есть</span>` : ''}</div>
+        <div class="td-water-sub"><span class="num">${fmtNum(tot.water)}${wGoal ? ` из ${fmtNum(wGoal)}` : ''} мл</span>${pace.behind >= 250 ? html`<span class="td-pace text-warn">отстаёшь на ${fmtNum(Math.round(pace.behind / 50) * 50)} мл</span>` : wGoal && tot.water >= wGoal ? html`<span class="td-pace text-ok">норма на сегодня есть</span>` : ''}</div>
       </div>
       <div class="td-water-btns">
         <button type="button" class="btn sm" data-act="water" data-ml="250" aria-label="Добавить 250 мл воды">+250</button>
@@ -771,12 +776,13 @@ function notifyCard(ctx) {
   try { perm = notify.permission(); } catch { /* ignore */ }
   const head = cardHead('Напоминания', 'bell', { href: '#/settings?tab=notify', linkLabel: 'Настроить' });
   if (perm !== 'granted') {
-    const what = ctx.m.schedule ? 'пары' : ctx.m.tasks ? 'дела' : 'важное';
+    const what = [ctx.m.schedule && 'пары', ctx.m.tasks && 'дедлайны', ctx.m.habits && 'привычки'].filter(Boolean);
+    const whatText = what.length > 1 ? `${what.slice(0, -1).join(', ')} и ${what[what.length - 1]}` : what[0] || 'важное';
     const [title, text] = perm === 'denied'
       ? ['Уведомления запрещены', 'Браузер блокирует уведомления для Life. Разреши их в настройках сайта (значок замка рядом с адресом).']
       : perm === 'unsupported'
         ? ['Уведомления недоступны', 'Этот браузер не умеет показывать уведомления. Можно подключить Telegram-бота в настройках.']
-        : ['Включи уведомления', `Чтобы не пропускать ${what}: напомню заранее, даже если вкладка закрыта.`];
+        : ['Включи уведомления', `Чтобы не пропускать ${whatText} — напомню заранее.`];
     return html`<section class="card td-card td-notify td-cta-card">
       ${head}
       <div class="td-cta">

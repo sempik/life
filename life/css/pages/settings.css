@@ -1,1 +1,437 @@
-/* Стили страницы «settings». Все селекторы — внутри .p-settings */
+/* Стили страницы «settings». Все селекторы — внутри .p-settings;
+ * шторки страницы — .sh-settings (импорт, удаление) и .sh-onboarding (мастер первого запуска). */
+
+.p-settings { gap: 14px; }
+
+/* ---------- Вкладки: прилипают под шапкой ---------- */
+.p-settings .st-tabs {
+  position: sticky;
+  top: calc(var(--topbar-h) + var(--safe-top));
+  z-index: 20;
+  margin: -2px calc(-1 * var(--gutter)) 0;
+  padding: 0 var(--gutter);
+  background: var(--bg-blur);
+  -webkit-backdrop-filter: saturate(1.6) blur(18px);
+  backdrop-filter: saturate(1.6) blur(18px);
+  scroll-padding: 0 var(--gutter);
+}
+.p-settings .st-tabs > button { min-height: 44px; }
+.p-settings .st-tabs > button .ico { color: inherit; opacity: 0.85; }
+@media (max-width: 599.98px) {
+  .p-settings .st-tabs > button .ico { display: none; }
+}
+@media (min-width: 900px) {
+  .p-settings .st-tabs {
+    top: 0;
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* ---------- Сетка карточек: одна колонка, на широком ПК — две ---------- */
+.p-settings .st-body { min-width: 0; }
+.p-settings .st-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.p-settings .st-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.p-settings .st-col:empty { display: none; }
+@media (min-width: 900px) {
+  .p-settings .st-grid { max-width: 720px; }
+}
+@media (min-width: 1180px) {
+  .p-settings .st-grid { max-width: none; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 16px; }
+  .p-settings .st-col { gap: 16px; }
+}
+
+.p-settings .st-card { display: flex; flex-direction: column; gap: 12px; }
+.p-settings .st-card > .card-head { margin-bottom: 0; }
+.p-settings .st-card > .card-head .badge { text-transform: none; }
+.p-settings .st-loading { min-height: 120px; align-items: center; justify-content: center; }
+.p-settings .st-danger { border-color: var(--bad-soft); }
+
+/* ---------- Текст ---------- */
+.p-settings .st-text { color: var(--text-2); font-size: 14.5px; line-height: 1.5; }
+.p-settings .st-text b { color: var(--text); font-weight: 600; }
+.p-settings .st-mt { margin-top: 6px; }
+.p-settings .st-note { margin-top: -2px; }
+.p-settings .st-note-top { margin-bottom: 2px; }
+.p-settings .st-opt { font-weight: 400; opacity: 0.75; }
+.p-settings .st-empty-line { font-size: 14px; }
+.p-settings .alert p + p { margin-top: 6px; }
+.p-settings .st-alert-actions { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+.p-settings .st-alert-actions .btn { background: var(--surface); }
+.p-settings code, .sh-settings code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.86em;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--text);
+  white-space: nowrap;
+}
+.p-settings .st-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13.5px; }
+.p-settings .input.st-mono { font-size: 16px; }
+
+/* ---------- Строки с переключателями ---------- */
+.p-settings .st-rows { display: flex; flex-direction: column; }
+.p-settings .st-rows > .st-row + .st-row { border-top: 1px solid var(--line); }
+.p-settings .st-row { gap: 12px; min-height: 54px; padding: 6px 0; }
+.p-settings .st-row .switch-label { flex: 1; }
+.p-settings .st-row-ico {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* Подпись + поле времени (+ переключатель) */
+.p-settings .st-line { display: flex; align-items: center; gap: 12px; min-height: 54px; padding: 4px 0; }
+.p-settings .st-line + .st-line { border-top: 1px solid var(--line); }
+.p-settings .st-line-l { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
+.p-settings .st-line .st-time { width: 136px; flex: none; }
+.p-settings .st-meals { padding-left: 48px; margin-top: -6px; }
+
+.p-settings .st-time { height: 44px; padding: 0 8px 0 12px; font-variant-numeric: tabular-nums; min-width: 0; }
+/* На сенсорных экранах значок часов не нужен (выбор — по нажатию), а место — нужно. */
+@media (pointer: coarse) {
+  .p-settings .st-time::-webkit-calendar-picker-indicator { display: none; }
+  .p-settings .st-line .st-time { width: 112px; }
+}
+.p-settings .st-range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: 8px;
+  max-width: 320px;
+}
+.p-settings .st-range .st-time { width: 100%; }
+.p-settings .st-dash { color: var(--muted); text-align: center; }
+.p-settings .st-range .st-dash { padding-bottom: 11px; }
+
+/* Ключ — значение */
+.p-settings .st-kv { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.p-settings .st-kv-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 9px 14px;
+  font-size: 14px;
+  min-width: 0;
+}
+.p-settings .st-kv-row + .st-kv-row { border-top: 1px solid var(--line); }
+.p-settings .st-kv-row > :first-child { flex: none; }
+.p-settings .st-kv-row > :last-child { text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.p-settings .st-kv-v { display: inline-flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6px 8px; }
+
+.p-settings .st-sub-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.p-settings .st-sub-head .muted { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 13px; }
+
+.p-settings .st-btns { gap: 8px; }
+.p-settings .st-inline { display: flex; align-items: center; gap: 8px; }
+.p-settings .st-inline > .input { flex: 1; min-width: 0; }
+.p-settings .st-inline > .btn { flex: none; }
+
+/* ---------- Основное ---------- */
+.p-settings .st-seg > button { flex: 1 1 auto; min-width: 0; height: 38px; padding: 0 8px; }
+@media (max-width: 479.98px) {
+  .p-settings .st-seg > button .ico { display: none; }
+}
+
+.p-settings .st-week {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 15px;
+}
+.p-settings .st-week > .ico { color: var(--accent); flex: none; }
+
+.p-settings .st-pairs { display: flex; flex-direction: column; gap: 8px; }
+.p-settings .st-pair {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 148px) 14px minmax(0, 148px) 40px;
+  justify-content: start;
+  align-items: center;
+  gap: 6px;
+}
+.p-settings .st-pair-n { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--muted); white-space: nowrap; }
+.p-settings .st-pair-n b {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.p-settings .st-del { color: var(--muted); }
+.p-settings .st-del:hover { color: var(--bad); background: var(--bad-soft); }
+@media (max-width: 479.98px) {
+  .p-settings .st-pair { grid-template-columns: 28px minmax(0, 1fr) 12px minmax(0, 1fr) 40px; }
+  .p-settings .st-pair-n > span { display: none; }
+}
+
+/* ---------- Уведомления ---------- */
+.p-settings .st-push { gap: 10px; min-height: 44px; }
+.p-settings .st-lead { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; }
+.p-settings .st-lead + .st-lead { border-top: 1px solid var(--line); }
+.p-settings .st-lead + .st-line { border-top: 1px solid var(--line); }
+.p-settings .st-lead-h { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.p-settings .st-chips { gap: 6px; }
+.p-settings .st-chips .chip { height: 40px; padding: 0 12px; }
+.p-settings .st-upcoming .item { align-items: flex-start; min-height: 0; padding: 10px 0; }
+.p-settings .st-when { flex-direction: column; align-items: flex-end; gap: 0; padding-top: 1px; }
+.p-settings .st-when b { color: var(--text); font-weight: 600; font-size: 14px; }
+.p-settings .st-when span { font-size: 12px; }
+
+/* ---------- Шаги (синхронизация, бот, Telegram) ---------- */
+.p-settings .st-steps { list-style: none; margin: 0; padding: 0; counter-reset: st; display: flex; flex-direction: column; }
+.p-settings .st-steps > li {
+  counter-increment: st;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 0 20px 40px;
+}
+.p-settings .st-steps > li::before {
+  content: counter(st);
+  position: absolute;
+  left: 0;
+  top: -3px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+.p-settings .st-steps > li::after {
+  content: "";
+  position: absolute;
+  left: 13.5px;
+  top: 31px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--line-2);
+}
+.p-settings .st-steps > li:last-child { padding-bottom: 0; }
+.p-settings .st-steps > li:last-child::after { display: none; }
+.p-settings .st-step-t { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-weight: 600; font-size: 15px; line-height: 1.35; }
+.p-settings .st-step-d { color: var(--text-2); font-size: 14px; line-height: 1.5; }
+
+.p-settings .st-form { display: flex; flex-direction: column; gap: 14px; }
+.p-settings .st-inline-form { padding: 14px; border-radius: var(--radius-sm); background: var(--surface-2); }
+.p-settings .st-inline-form .input { background: var(--surface); }
+.p-settings .st-secret { position: relative; display: flex; min-width: 0; }
+.p-settings .st-secret > .input { padding-right: 50px; }
+.p-settings .st-secret > .icon-btn { position: absolute; right: 3px; top: 3px; color: var(--muted); }
+.p-settings .st-secret > .icon-btn:hover { color: var(--text); }
+
+.p-settings .st-status { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--surface-2); }
+.p-settings .st-status-ico { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; background: var(--surface-3); }
+.p-settings .st-ok .st-status-ico { background: var(--ok-soft); color: var(--ok); }
+.p-settings .st-warn .st-status-ico { background: var(--warn-soft); color: var(--warn); }
+.p-settings .st-bad .st-status-ico { background: var(--bad-soft); color: var(--bad); }
+.p-settings .st-info .st-status-ico { background: var(--info-soft); color: var(--info); }
+.p-settings .st-status-ico.spin { animation: none; }
+.p-settings .st-status-ico.spin .ico { animation: spin 1s linear infinite; }
+.p-settings .st-status-t { font-weight: 600; }
+.p-settings .st-status-s { color: var(--muted); font-size: 13px; }
+
+.p-settings .st-feats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.p-settings .st-feats li { display: flex; align-items: flex-start; gap: 10px; color: var(--text-2); font-size: 14px; line-height: 1.45; }
+.p-settings .st-feat-ico {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-top: -3px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+.p-settings .st-bot-status { display: flex; flex-direction: column; gap: 10px; }
+
+.p-settings .st-copychip {
+  height: 40px;
+  gap: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+.p-settings .st-copychip .ico { opacity: 0.7; }
+.p-settings .st-copy { display: flex; gap: 8px; min-width: 0; }
+.p-settings .st-copy > .input { flex: 1; min-width: 0; text-overflow: ellipsis; }
+.p-settings .st-copy > .icon-btn { width: 46px; height: 46px; border-radius: var(--radius-sm); }
+.p-settings .st-howto { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: var(--text-2); font-size: 14px; line-height: 1.5; }
+.p-settings .st-howto b { color: var(--text); font-weight: 600; }
+
+/* ---------- Данные ---------- */
+.p-settings .st-counts { display: grid; grid-template-columns: repeat(auto-fill, minmax(94px, 1fr)); gap: 8px; }
+.p-settings .st-count { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-2); }
+.p-settings .st-count-n { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+.p-settings .st-count-l { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-settings .st-count.zero .st-count-n { color: var(--muted); }
+.p-settings .st-persist { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+
+/* ---------- О приложении ---------- */
+.p-settings .st-hero-top { display: flex; align-items: center; gap: 14px; }
+.p-settings .st-hero-logo { flex: none; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 17px; background: var(--text); color: var(--on-text); }
+.p-settings .st-hero-name { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+.p-settings .st-plat .item { align-items: flex-start; }
+.p-settings .st-plat .item-icon { width: 36px; height: 36px; color: var(--muted); }
+.p-settings .st-plat .st-cur .item-icon { background: var(--text); color: var(--on-text); }
+.p-settings .st-plat .item-title .badge { margin-left: 4px; vertical-align: 1px; }
+.p-settings .st-links .item-icon { width: 36px; height: 36px; }
+
+/* ===================================================================== */
+/* Шторки страницы: импорт и удаление                                    */
+/* ===================================================================== */
+
+.sh-settings .sh-import, .sh-settings .sh-wipe { display: flex; flex-direction: column; gap: 14px; }
+.sh-settings .sh-file { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--surface-2); }
+.sh-settings .sh-file > .ico { flex: none; color: var(--muted); }
+.sh-settings .sh-file-name { font-weight: 600; overflow-wrap: anywhere; }
+.sh-settings .sh-modes { display: flex; flex-direction: column; gap: 10px; color: var(--text-2); font-size: 14px; line-height: 1.5; }
+.sh-settings .sh-modes b { color: var(--text); font-weight: 600; }
+.sh-settings .sh-keep { padding: 4px 14px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--line); }
+.sh-settings .sh-keep .switch-label { flex: 1; }
+@media (max-width: 899.98px) {
+  .sheet.sh-import-sheet .sheet-foot { flex-direction: column-reverse; align-items: stretch; }
+  .sheet.sh-import-sheet .sheet-foot .btn { width: 100%; flex: none; }
+}
+
+/* ===================================================================== */
+/* Мастер первого запуска                                                */
+/* ===================================================================== */
+
+.sheet.sh-onboarding .sheet-handle, .sheet.sh-onboarding .sheet-head { display: none; }
+.sheet.sh-onboarding.no-title .sheet-body { padding: 14px 20px 20px; }
+@media (min-width: 900px) {
+  .sheet.sh-onboarding { max-width: 520px; }
+  .sheet.sh-onboarding.no-title .sheet-body { padding: 18px 28px 24px; }
+}
+.sh-onboarding .ob-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 -10px 12px 0; }
+.sh-onboarding .ob-dots { display: flex; align-items: center; gap: 6px; }
+.sh-onboarding .ob-dots i { width: 7px; height: 7px; border-radius: 99px; background: var(--line-2); transition: width 0.25s var(--ease), background 0.2s; }
+.sh-onboarding .ob-dots i.done { background: var(--muted); }
+.sh-onboarding .ob-dots i.on { width: 22px; background: var(--text); }
+.sh-onboarding .ob-skip { height: 40px; padding: 0 12px; color: var(--muted); font-size: 14px; }
+.sh-onboarding .ob-skip:hover { color: var(--text); }
+.sh-onboarding .ob-step { display: flex; flex-direction: column; gap: 10px; min-height: 330px; animation: ob-in 0.3s var(--ease) both; }
+@keyframes ob-in { from { opacity: 0; transform: translateX(12px); } }
+.sh-onboarding .ob-hero {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 6px;
+  border-radius: 19px;
+  background: var(--text);
+  color: var(--on-text);
+}
+.sh-onboarding .ob-title { font-size: 26px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.15; }
+.sh-onboarding .ob-text { color: var(--text-2); font-size: 15px; line-height: 1.5; }
+.sh-onboarding .ob-field { margin-top: 8px; }
+.sh-onboarding .ob-mt { margin-top: 8px; }
+.sh-onboarding .ob-week { color: var(--text); font-weight: 600; }
+
+.sh-onboarding .ob-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.sh-onboarding .ob-tile, .sh-onboarding .ob-choice {
+  position: relative;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.12s;
+}
+.sh-onboarding .ob-tile:hover, .sh-onboarding .ob-choice:hover { border-color: var(--line-2); }
+.sh-onboarding .ob-tile:active, .sh-onboarding .ob-choice:active { transform: scale(0.98); }
+.sh-onboarding .ob-tile.on, .sh-onboarding .ob-choice.on { border-color: var(--text); background: var(--surface-3); }
+.sh-onboarding .ob-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-height: 124px; padding: 14px; }
+.sh-onboarding .ob-tile-ico {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 8px;
+  border-radius: 13px;
+  background: var(--surface-3);
+  color: var(--muted);
+  transition: background 0.15s, color 0.15s;
+}
+.sh-onboarding .on .ob-tile-ico { background: var(--text); color: var(--on-text); }
+.sh-onboarding .ob-tile-t { font-size: 15.5px; font-weight: 600; }
+.sh-onboarding .ob-tile-s { font-size: 12.5px; line-height: 1.35; color: var(--muted); }
+.sh-onboarding .ob-tick {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line-2);
+  color: transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.sh-onboarding .on > .ob-tick { background: var(--text); border-color: var(--text); color: var(--on-text); }
+
+.sh-onboarding .ob-seg { margin-top: 6px; }
+.sh-onboarding .ob-seg > button { flex: 1 1 0; height: 40px; }
+.sh-onboarding .ob-pairs-h { margin-top: 6px; font-size: 13.5px; font-weight: 600; }
+.sh-onboarding .ob-pairs-h .muted { font-weight: 400; }
+.sh-onboarding .ob-pairs { display: flex; flex-wrap: wrap; gap: 6px; }
+.sh-onboarding .ob-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px 0 4px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.sh-onboarding .ob-pair b { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-3); color: var(--text); font-size: 12px; font-weight: 600; }
+
+.sh-onboarding .ob-choices { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.sh-onboarding .ob-choice { display: flex; align-items: center; gap: 14px; min-height: 78px; padding: 14px 48px 14px 14px; }
+.sh-onboarding .ob-choice .ob-tile-ico { margin-bottom: 0; }
+.sh-onboarding .ob-choice-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sh-onboarding .ob-choice .ob-tick { top: 50%; margin-top: -11px; }

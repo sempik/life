@@ -311,7 +311,7 @@
   gap: 3px;
   white-space: nowrap;
 }
-.p-today .td-clean { white-space: normal; min-width: 0; }
+.p-today .td-clean { display: inline; white-space: normal; }
 .p-today .td-clean b { white-space: nowrap; }
 .p-today .td-streak { color: var(--warn); font-weight: 600; }
 .p-today .td-clean .ico, .p-today .td-saved .ico { color: var(--muted); }
@@ -383,7 +383,9 @@
 }
 .p-today .td-water-main { flex: 1; min-width: 0; }
 .p-today .td-water-title { font-weight: 600; }
-.p-today .td-water-sub { color: var(--muted); font-size: 13px; }
+.p-today .td-water-sub { display: flex; flex-wrap: wrap; column-gap: 8px; color: var(--muted); font-size: 13px; }
+.p-today .td-water-sub > .num { white-space: nowrap; }
+.p-today .td-pace { white-space: nowrap; }
 .p-today .td-water-btns { display: flex; gap: 6px; flex: none; }
 .p-today .td-water-btns .btn { padding: 0 11px; height: 40px; font-variant-numeric: tabular-nums; }
 .p-today .td-food-add { margin-top: 14px; }
@@ -542,3 +544,15 @@
   .p-today .td-later:hover { background: transparent; }
 }
 .p-today .td-rem.digest .item-title { font-size: 14px; color: var(--text-2); }
+
+/* Узкая карточка питания (3 колонки на ПК): приёмы 2×2, кнопки воды — отдельной строкой */
+.p-today .td-food { container: tdfood / inline-size; }
+@container tdfood (max-width: 340px) {
+  .p-today .td-meals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .p-today .td-meal { flex-direction: row; align-items: center; justify-content: space-between; min-height: 44px; }
+  .p-today .td-water { flex-wrap: wrap; }
+  .p-today .td-water-btns { width: 100%; }
+  .p-today .td-water-btns .btn { flex: 1; }
+  .p-today .td-kcal { gap: 14px; }
+  .p-today .td-kcal-left b { font-size: 16px; }
+}
