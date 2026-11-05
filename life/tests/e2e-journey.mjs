@@ -94,7 +94,6 @@ async function makeH({ browser, server, vp, errors, notes }) {
     evaluate: (fn, arg) => h.page.evaluate(fn, arg),
     store: (fn, arg) => h.page.evaluate(async ([src, a]) => {
       const [{ store }, d] = await Promise.all([import('./js/core/store.js'), import('./js/lib/dates.js')]);
-      // eslint-disable-next-line no-new-func
       return new Function('store', 'd', 'a', `return (${src})(store, d, a)`)(store, d, a);
     }, [fn.toString(), arg ?? null]),
     top: () => h.page.locator('.sheet-layer.open .sheet').last(),
