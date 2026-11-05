@@ -1071,7 +1071,7 @@ export function openFoodSearch(opts = {}) {
         </span>
         <span class="fs-row-side"><b class="num">${fmtNum(prod.kcal)}</b><small>ккал/100 г</small></span>
       </button>
-      <button type="button" class="icon-btn fs-star ${fav ? 'on' : ''}" data-fs="star" data-key="${k}" aria-pressed="${fav}" aria-label="${fav ? 'Убрать из избранного' : 'В избранное'}: ${prod.name}">${icon('star', 18)}</button>
+      <button type="button" class="icon-btn fs-star ${fav ? 'on' : ''}" data-fs="star" data-key="${k}" aria-pressed="${String(fav)}" aria-label="${fav ? 'Убрать из избранного' : 'В избранное'}: ${prod.name}">${icon('star', 18)}</button>
       ${edit ? html`<button type="button" class="icon-btn fs-edit" data-fs="edit" data-key="${k}" aria-label="Изменить: ${prod.name}">${icon('edit', 18)}</button>` : ''}
     </div>`;
   };
@@ -1146,7 +1146,7 @@ export function openFoodSearch(opts = {}) {
         ? html`<div class="fs-list">${recent.map(r => (r.kind === 'product' ? productRow('r', r.product, { grams: r.grams, usual: true }) : mealRow('r', r.meal)))}</div>`
         : html`<div class="fs-empty">${icon('history', 22)}<div><b>Тут будет то, что ты ешь чаще всего</b><div class="small muted">Начни вводить название — во встроенной базе больше 200 продуктов и блюд.</div></div></div>`;
     }
-    const tab = (id, label) => html`<button type="button" class="${st.tab === id ? 'on' : ''}" data-fs="tab" data-tab="${id}" aria-pressed="${st.tab === id}">${label}</button>`;
+    const tab = (id, label) => html`<button type="button" class="${st.tab === id ? 'on' : ''}" data-fs="tab" data-tab="${id}" aria-pressed="${String(st.tab === id)}">${label}</button>`;
     return html`<div class="seg block fs-tabs" role="group" aria-label="Списки">${tab('recent', 'Недавние')}${tab('fav', 'Избранное')}${tab('mine', 'Мои продукты')}</div>${body}`;
   }
 
@@ -1257,7 +1257,7 @@ export function openFoodSearch(opts = {}) {
           <div class="fs-prod-name">${prod.name}</div>
           <div class="fs-prod-sub">${sub}</div>
         </div>
-        ${canStar ? html`<button type="button" class="icon-btn bordered fs-star ${fav ? 'on' : ''}" data-fs="star-cur" aria-pressed="${fav}" aria-label="${fav ? 'Убрать из избранного' : 'В избранное'}">${icon('star', 20)}</button>` : ''}
+        ${canStar ? html`<button type="button" class="icon-btn bordered fs-star ${fav ? 'on' : ''}" data-fs="star-cur" aria-pressed="${String(fav)}" aria-label="${fav ? 'Убрать из избранного' : 'В избранное'}">${icon('star', 20)}</button>` : ''}
       </div>
       <div class="fs-amount">
         <label class="field-label" for="fs-grams">Сколько</label>
@@ -1275,7 +1275,7 @@ export function openFoodSearch(opts = {}) {
         <div class="field fs-meal-field">
           <div class="field-label">Приём пищи</div>
           <div class="seg block fs-meal-seg" role="group" aria-label="Приём пищи">
-            ${MEALS.map(m => html`<button type="button" data-fs="meal" data-meal="${m.id}" class="${m.id === st.mealSel ? 'on' : ''}" aria-pressed="${m.id === st.mealSel}">${m.label}</button>`)}
+            ${MEALS.map(m => html`<button type="button" data-fs="meal" data-meal="${m.id}" class="${m.id === st.mealSel ? 'on' : ''}" aria-pressed="${String(m.id === st.mealSel)}">${m.label}</button>`)}
           </div>
         </div>
         <div class="field fs-time-field">

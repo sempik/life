@@ -34,6 +34,8 @@ const LATE_REPAINT_MS = 1300;          // очередь напоминаний 
 const COL_GAP = 14;
 const MAX_ALERTS = 3;
 const MAX_TASKS = 7;
+const SOON_DAYS = 2;
+const MAX_SOON_TASKS = 3;
 const MAX_DONE_TASKS = 3;
 const MAX_REMINDERS = 4;
 const STALE_CONFLICT_MS = 90 * 60e3;   // расхождение по уже прошедшему событию не показываем
@@ -119,7 +121,8 @@ function buildTimeline(agenda, tasks, todayStr, nowMs) {
 }
 
 /**
- * Задачи для карточки: { overdue, today, important, done } (без удалённых, по порядку показа).
+ * Задачи для карточки: { overdue, today, important, soon, done } (без удалённых, по порядку показа).
+ * soon — сроки на завтра и послезавтра: показываются, если осталось место.
  * done — выполненные сегодня (срок ≤ сегодня или без срока).
  */
 function pickTasks(tasks, todayStr) {
@@ -130,6 +133,9 @@ function pickTasks(tasks, todayStr) {
     overdue: sortBy(open.filter(t => isYmd(t.due) && t.due < todayStr), t => t.due, t => t.dueTime || '', prio, created),
     today: sortBy(open.filter(t => t.due === todayStr), t => (isHm(t.dueTime) ? t.dueTime : '99:99'), prio, created),
     important: sortBy(open.filter(t => !isYmd(t.due) && Number(t.priority) >= 1), prio, created),
+    // Скоро: сроки в ближайшие 2 дня — чтобы «сдать лабу завтра» не терялась, пока сегодня пусто.
+    soon: sortBy(open.filter(t => isYmd(t.due) && t.due > todayStr && t.due <= addDays(todayStr, SOON_DAYS)),
+      t => t.due, t => (isHm(t.dueTime) ? t.dueTime : '99:99'), prio, created),
     done: sortBy(tasks.filter(t => t && !t.deleted && t.done && Number.isFinite(t.doneAt)
       && msToYmd(t.doneAt) === todayStr && (!isYmd(t.due) || t.due <= todayStr)), t => -t.doneAt),
   };
@@ -551,7 +557,7 @@ function timelineRow(r, ctx, flagged) {
     return html`<div class="tl-item td-tl-task ${r.past ? 'past' : ''} ${r.done ? 'done' : ''} ${r.late ? 'late' : ''}" data-act="task-open" data-id="${t.id}" role="button" tabindex="0" aria-label="Задача: ${t.title}">
       <div class="tl-time">${t.dueTime}<small>${r.late ? 'просрочено' : 'срок'}</small></div>
       <div class="td-tl-body td-tl-taskbody">
-        <button type="button" class="check ${t.done ? 'on' : ''} ${p ? `prio-${p}` : ''}" data-act="task-toggle" data-id="${t.id}" aria-pressed="${!!t.done}" aria-label="${t.done ? 'Вернуть задачу' : 'Выполнить задачу'} «${t.title}»"></button>
+        <button type="button" class="check ${t.done ? 'on' : ''} ${p ? `prio-${p}` : ''}" data-act="task-toggle" data-id="${t.id}" aria-pressed="${String(!!t.done)}" aria-label="${t.done ? 'Вернуть задачу' : 'Выполнить задачу'} «${t.title}»"></button>
         <div class="td-tl-text">
           <div class="td-tl-title">${t.title || 'Без названия'}</div>
           <div class="td-tl-sub">Задача${PRIO_LABEL[p] ? ` · ${PRIO_LABEL[p]}` : ''}</div>
@@ -583,8 +589,9 @@ function tasksCard(ctx) {
   const all = store.all('tasks');
   const sel = pickTasks(all, ctx.t);
   const open = [...sel.overdue, ...sel.today, ...sel.important];
-  const shown = open.slice(0, MAX_TASKS);
-  const rest = open.length - shown.length;
+  const room = Math.max(0, Math.min(MAX_SOON_TASKS, MAX_TASKS - open.length));
+  const shown = [...open.slice(0, MAX_TASKS), ...sel.soon.slice(0, room)];
+  const rest = open.length + sel.soon.length - shown.length;
   const done = sel.done.slice(0, MAX_DONE_TASKS);
   const overdueIds = new Set(sel.overdue.map(t => t.id));
   const badge = sel.overdue.length
@@ -606,7 +613,7 @@ function tasksCard(ctx) {
       ${done.map(t => taskItem(t, ctx, false))}
     </div>
     ${rest > 0 ? html`<a class="td-rest" href="#/tasks">Ещё ${pluralN(rest, ['задача', 'задачи', 'задач'])}${icon('chevron-right', 16)}</a>` : ''}
-    ${!shown.length ? html`<div class="td-note">${icon('sparkles', 16)}На сегодня всё сделано — красота!</div>` : ''}`;
+    ${!open.length && done.length ? html`<div class="td-note">${icon('sparkles', 16)}На сегодня всё сделано — красота!</div>` : ''}`;
   }
   return html`<section class="card td-card td-tasks-card">
     ${cardHead('Задачи', 'check-square', { href: '#/tasks', linkLabel: 'Все', extra: addBtn, badge })}
@@ -619,6 +626,7 @@ function taskItem(t, ctx, overdue) {
   const parts = [];
   if (overdue) parts.push(html`<span class="text-bad">просрочено · ${fmtDate(t.due, { weekday: true, short: true })}</span>`);
   else if (t.due === ctx.t && isHm(t.dueTime)) parts.push(`до ${t.dueTime}`);
+  else if (isYmd(t.due) && t.due > ctx.t && !t.done) parts.push(`${fmtDayLabel(t.due, ctx.t).toLowerCase()}${isHm(t.dueTime) ? ` до ${t.dueTime}` : ''}`);
   else if (!isYmd(t.due) && !t.done) parts.push('без срока');
   if (PRIO_LABEL[p] && !t.done) parts.push(html`<span class="${p === 2 ? 'text-bad' : 'text-warn'}">${PRIO_LABEL[p]}</span>`);
   const ev = t.eventId ? store.get('events', t.eventId) : null;
@@ -626,7 +634,7 @@ function taskItem(t, ctx, overdue) {
   if (t.repeat) parts.push(html`${icon('repeat', 13)}`);
   const sub = parts.flatMap((x, i) => (i ? [' · ', x] : [x]));
   return html`<div class="item td-task ${t.done ? 'done' : ''}">
-    <button type="button" class="check ${t.done ? 'on' : ''} ${p && !t.done ? `prio-${p}` : ''}" data-act="task-toggle" data-id="${t.id}" aria-pressed="${!!t.done}" aria-label="${t.done ? 'Вернуть задачу' : 'Выполнить задачу'} «${t.title}»"></button>
+    <button type="button" class="check ${t.done ? 'on' : ''} ${p && !t.done ? `prio-${p}` : ''}" data-act="task-toggle" data-id="${t.id}" aria-pressed="${String(!!t.done)}" aria-label="${t.done ? 'Вернуть задачу' : 'Выполнить задачу'} «${t.title}»"></button>
     <div class="item-main" data-act="task-open" data-id="${t.id}" role="button" tabindex="0">
       <span class="item-title">${t.title || 'Без названия'}</span>
       ${sub.length ? html`<span class="item-sub">${sub}</span>` : ''}
@@ -682,7 +690,7 @@ function goodItem(it, logs, ctx) {
     <div class="item-side">
       ${multi
         ? html`<button type="button" class="btn sm td-plus" data-act="habit-done" data-id="${h.id}" aria-label="Плюс один: ${h.name}">+1</button>`
-        : html`<button type="button" class="check ok ${it.complete ? 'on' : ''}" data-act="${it.complete ? 'habit-undo' : 'habit-done'}" data-id="${h.id}" aria-pressed="${it.complete}" aria-label="${it.complete ? 'Снять отметку' : 'Отметить'}: ${h.name}"></button>`}
+        : html`<button type="button" class="check ok ${it.complete ? 'on' : ''}" data-act="${it.complete ? 'habit-undo' : 'habit-done'}" data-id="${h.id}" aria-pressed="${String(it.complete)}" aria-label="${it.complete ? 'Снять отметку' : 'Отметить'}: ${h.name}"></button>`}
     </div>
   </div>`;
 }
@@ -807,7 +815,13 @@ function remItem(r, ctx) {
   const n = diffDays(ctx.t, day);
   const dayLabel = n === 0 ? '' : n === 1 ? 'завтра' : fmtDate(day, { short: true, year: false });
   // Дайджест — одной строкой (его текст длинный и меняется в течение дня).
-  const body = r.kind === 'digest' ? 'сводка дня' : r.body;
+  let body = r.kind === 'digest' ? 'сводка дня' : r.body;
+  // Текст задачи посчитан на момент показа («Срок: сегодня…»); в списке — относительно сегодня.
+  const task = r.kind === 'task' && r.refId ? store.get('tasks', r.refId) : null;
+  if (task && isYmd(task.due) && typeof body === 'string' && body.startsWith('Срок:')) {
+    const fresh = `Срок: ${fmtDayLabel(task.due, ctx.t).toLowerCase()}${isHm(task.dueTime) ? ` в ${task.dueTime}` : ''}`;
+    body = [fresh, ...body.split(' · ').slice(1)].join(' · ');
+  }
   return html`<a class="item td-rem ${r.kind === 'digest' ? 'digest' : ''}" href="${href}">
     <span class="td-rem-time"><span class="num">${msToHm(r.at)}</span>${dayLabel ? html`<small>${dayLabel}</small>` : ''}</span>
     <span class="item-main">

@@ -186,7 +186,7 @@ function headSub(c, total) {
 function segHtml(c) {
   return FILTERS.map(f => {
     const n = f.id === 'today' ? c.todayFilter : 0;
-    return html`<button type="button" class="${view.filter === f.id ? 'on' : ''}" data-act="filter" data-filter="${f.id}" aria-pressed="${view.filter === f.id}">${f.label}${n ? html`<span class="tk-seg-n ${c.overdue ? 'bad' : ''}">${n}</span>` : ''}</button>`;
+    return html`<button type="button" class="${view.filter === f.id ? 'on' : ''}" data-act="filter" data-filter="${f.id}" aria-pressed="${String(view.filter === f.id)}">${f.label}${n ? html`<span class="tk-seg-n ${c.overdue ? 'bad' : ''}">${n}</span>` : ''}</button>`;
   });
 }
 
@@ -202,7 +202,7 @@ function tagsHtml(all) {
   if (view.tag && !map.has(view.tag)) map.set(view.tag, 0);
   const tags = [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ru'));
   if (!tags.length) return '';
-  return tags.map(([tag, n]) => html`<button type="button" class="chip sm tk-tag-chip ${view.tag === tag ? 'on' : ''}" data-act="tag" data-tag="${tag}" aria-pressed="${view.tag === tag}">#${tag}${n ? html`<span class="tk-chip-n">${n}</span>` : ''}${view.tag === tag ? icon('x', 14) : ''}</button>`);
+  return tags.map(([tag, n]) => html`<button type="button" class="chip sm tk-tag-chip ${view.tag === tag ? 'on' : ''}" data-act="tag" data-tag="${tag}" aria-pressed="${String(view.tag === tag)}">#${tag}${n ? html`<span class="tk-chip-n">${n}</span>` : ''}${view.tag === tag ? icon('x', 14) : ''}</button>`);
 }
 
 function eventChip(t) {
@@ -249,7 +249,7 @@ function itemHtml(t, group, today) {
   const title = t.title || 'Без названия';
 
   return html`<div class="tk-item ${done ? 'is-done' : ''} ${overdue ? 'is-overdue' : ''}" data-id="${t.id}">
-    <button type="button" class="check ${done ? 'on' : ''} ${p && !done ? `prio-${p}` : ''}" data-act="toggle" data-id="${t.id}" aria-pressed="${done}" aria-label="${done ? 'Вернуть в работу' : 'Выполнить'}: ${title}"></button>
+    <button type="button" class="check ${done ? 'on' : ''} ${p && !done ? `prio-${p}` : ''}" data-act="toggle" data-id="${t.id}" aria-pressed="${String(done)}" aria-label="${done ? 'Вернуть в работу' : 'Выполнить'}: ${title}"></button>
     <div class="tk-main" data-act="open" data-id="${t.id}" role="button" tabindex="0">
       <span class="tk-title"><span class="tk-title-t">${title}</span></span>
       ${note ? html`<span class="tk-note">${note}</span>` : ''}
@@ -351,7 +351,7 @@ function bodyHtml(all, c, today) {
     const title = view.filter === 'today' ? 'Сделано сегодня' : 'Готово';
     parts.push(html`<section class="tk-group tk-done ${doneOpen ? 'open' : ''}" data-group="done">
       <header class="tk-gh">
-        <button type="button" class="tk-gh-btn" data-act="toggle-done" aria-expanded="${doneOpen}">
+        <button type="button" class="tk-gh-btn" data-act="toggle-done" aria-expanded="${String(doneOpen)}">
           <h2 class="tk-gt">${title}</h2><span class="tk-gc">${sel.done.length}</span>${icon('chevron-down', 18)}
         </button>
       </header>
