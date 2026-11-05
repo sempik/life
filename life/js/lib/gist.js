@@ -136,11 +136,13 @@ export class GistClient {
 
   /** fetch с таймаутом и переводом сетевых ошибок в GistError('NETWORK'). */
   async send(url, init = {}) {
-    if (typeof this.fetchImpl !== 'function') throw new GistError('NETWORK', MSG.NETWORK);
+    // Вызываем как обычную функцию: window.fetch с чужим this бросает «Illegal invocation».
+    const doFetch = this.fetchImpl;
+    if (typeof doFetch !== 'function') throw new GistError('NETWORK', MSG.NETWORK);
     const ctrl = typeof AbortController === 'function' && this.timeoutMs > 0 ? new AbortController() : null;
     const timer = ctrl ? setTimeout(() => ctrl.abort(), this.timeoutMs) : null;
     try {
-      return await this.fetchImpl(url, ctrl ? { ...init, signal: ctrl.signal } : init);
+      return await doFetch(url, ctrl ? { ...init, signal: ctrl.signal } : init);
     } catch (err) {
       const timedOut = ctrl?.signal.aborted;
       throw new GistError('NETWORK', timedOut ? MSG.TIMEOUT : MSG.NETWORK, { cause: err, detail: String(err?.message || err) });

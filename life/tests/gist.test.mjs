@@ -73,6 +73,18 @@ test('headers: auth, accept, api version; User-Agent only when set', async () =>
   assert.equal(b.calls[0].headers['User-Agent'], 'life-bot/1');
 });
 
+test('fetchImpl is called without a receiver (window.fetch throws "Illegal invocation" otherwise)', async () => {
+  let receiver = 'not called';
+  const strictFetch = function (url) {
+    receiver = this;
+    if (this !== undefined && this !== globalThis) throw new TypeError("Failed to execute 'fetch' on 'Window': Illegal invocation");
+    return Promise.resolve(jsonResponse(200, { login: 'x' }));
+  };
+  const gc = new GistClient({ token: TOKEN, fetchImpl: strictFetch });
+  assert.deepEqual(await gc.me(), { login: 'x', scopes: null });
+  assert.ok(receiver === undefined || receiver === globalThis);
+});
+
 test('me(): GET /user → { login, scopes }', async () => {
   const { gc, calls } = client(() => jsonResponse(200, { login: 'sempik', id: 1 }, { 'x-oauth-scopes': 'gist' }));
   assert.deepEqual(await gc.me(), { login: 'sempik', scopes: ['gist'] });
