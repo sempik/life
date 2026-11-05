@@ -93,6 +93,18 @@ function dayOk(habit, e) {
   return e.slips <= limitOf(habit);
 }
 
+/**
+ * Прошедшее «настенное» время от a до b (мс): разница локальных часов без учёта
+ * переходов на летнее время — «10 дней 18 ч» от 00:00 до 18:00 даже через перевод часов.
+ */
+function wallElapsed(a, b) {
+  const wall = ms => {
+    const x = new Date(ms);
+    return Date.UTC(x.getFullYear(), x.getMonth(), x.getDate(), x.getHours(), x.getMinutes(), x.getSeconds(), x.getMilliseconds());
+  };
+  return Math.max(0, wall(b) - wall(a));
+}
+
 /** Время по умолчанию для «сегодня»: сейчас, но в пределах дня todayYmd. */
 function defaultNow(todayYmd) {
   const now = Date.now();
@@ -100,7 +112,7 @@ function defaultNow(todayYmd) {
   return clamp(now, toMs(todayYmd, '00:00'), toMs(addDays(todayYmd, 1), '00:00') - 1);
 }
 
-/** 1250 → '1 250' (неразрывный пробел между разрядами). */
+/** Деньги: 1250 → '1 250 ₽' (неразрывные пробелы между разрядами и перед ₽). */
 export function fmtMoney(n) {
   const v = Math.round(Number(n) || 0);
   const s = String(Math.abs(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -154,7 +166,7 @@ export function cleanTime(habit, logs, nowMs = Date.now()) {
   const slips = slipTimes(habit, logs, nowMs);
   const lastSlipMs = slips.length ? slips[slips.length - 1] : null;
   const sinceMs = lastSlipMs != null && lastSlipMs > start ? lastSlipMs : start;
-  const elapsed = Math.max(0, nowMs - sinceMs);
+  const elapsed = wallElapsed(sinceMs, nowMs);
   return {
     sinceMs,
     days: Math.floor(elapsed / DAY_MS),
@@ -180,7 +192,7 @@ export function streak(habit, logs, todayYmd, nowMs = defaultNow(todayYmd)) {
     const current = cleanTime(habit, logs, nowMs).days;
     const points = [start, ...slipTimes(habit, logs, nowMs).filter(ms => ms >= start), Math.max(start, nowMs)];
     let best = 0;
-    for (let i = 1; i < points.length; i++) best = Math.max(best, Math.floor((points[i] - points[i - 1]) / DAY_MS));
+    for (let i = 1; i < points.length; i++) best = Math.max(best, Math.floor(wallElapsed(points[i - 1], points[i]) / DAY_MS));
     return { current, best: Math.max(best, current) };
   }
 
@@ -210,7 +222,7 @@ export function savings(habit, logs, nowMs = Date.now()) {
   const baseline = Math.max(0, Number(habit?.baseline) || 0);
   const cost = Math.max(0, Number(habit?.costPerUnit) || 0);
   const start = startMs(habit, logs, nowMs);
-  const elapsedDays = Math.max(0, (nowMs - start) / DAY_MS);
+  const elapsedDays = wallElapsed(start, nowMs) / DAY_MS;
   const startDay = msToYmd(start), nowDay = msToYmd(nowMs);
   let slips = 0;
   for (const l of ownLogs(habit, logs)) {

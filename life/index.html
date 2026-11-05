@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Life</title>
+<meta name="description" content="Life — личный менеджер: расписание и пары, задачи, питание, вода, привычки и напоминания. Работает офлайн на телефоне и ПК.">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f4f1" media="(prefers-color-scheme: light)">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="./icons/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="./icons/apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Life">
+<meta name="format-detection" content="telephone=no">
+
+<!-- Шрифт Rubik: подгружается без блокировки отрисовки; офлайн — системные шрифты. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" crossorigin="anonymous" media="print" onload="this.media='all'">
+
+<script>
+  // Тема до загрузки стилей — без «вспышки». Настоящие настройки хранятся в IndexedDB.
+  (function () {
+    try {
+      var t = localStorage.getItem('life-theme');
+      if (t === 'dark' || t === 'light' || t === 'auto') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) { /* localStorage недоступен */ }
+  })();
+  // Ошибки загрузки модулей (до запуска приложения) — показываем человеку, а не белый экран.
+  window.addEventListener('error', function (e) {
+    if (window.__lifeBooted) return;
+    var t = e && e.target;
+    var isScript = t && t.tagName === 'SCRIPT';
+    if (!isScript && !(e && e.message)) return;
+    var view = document.getElementById('view');
+    if (!view) return;
+    var msg = isScript ? 'Не удалось загрузить файл: ' + (t.src || '') : String(e.message || '');
+    view.innerHTML = '';
+    var box = document.createElement('div');
+    box.className = 'boot-error';
+    var h = document.createElement('b');
+    h.textContent = 'Приложение не запустилось';
+    var p = document.createElement('div');
+    p.className = 'small';
+    p.textContent = msg;
+    var b = document.createElement('button');
+    b.className = 'btn primary';
+    b.type = 'button';
+    b.textContent = 'Перезагрузить';
+    b.onclick = function () { location.reload(); };
+    box.append(h, p, b);
+    view.append(box);
+  }, true);
+</script>
+<link rel="stylesheet" href="./css/app.css">
+<link rel="modulepreload" href="./js/app.js">
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-col">
+    <header class="topbar" id="topbar"></header>
+    <main class="view" id="view" tabindex="-1">
+      <div class="boot" aria-busy="true">
+        <svg class="boot-logo" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 1-7.8 4.5"/><path d="m8.2 12.3 2.6 2.6 5-5.6"/></svg>
+        <span>Загрузка…</span>
+      </div>
+    </main>
+  </div>
+  <nav class="tabbar" id="tabbar" aria-label="Основные разделы"></nav>
+</div>
+<div id="sheets"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<noscript>
+  <div class="noscript">
+    <b>Нужен JavaScript</b>
+    <p>Life — веб-приложение и без JavaScript не работает. Включите его в настройках браузера и обновите страницу.</p>
+  </div>
+</noscript>
+
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>

@@ -25,7 +25,7 @@ const typeEmoji = t => TYPE_EMOJI[t] || TYPE_EMOJI.other;
 
 const MEAL_GEN = { breakfast: 'завтрака', lunch: 'обеда', dinner: 'ужина', snack: 'перекуса' };
 const MEAL_LABEL = Object.fromEntries(MEALS.map(m => [m.id, m.label]));
-const PRIORITY_LABEL = { 1: 'важная', 2: 'срочная' };
+const PRIORITY_LABEL = { 1: '❗ важная', 2: '🔥 срочная' };
 const DAYS_FORMS = ['день', 'дня', 'дней'];
 
 /** Значения на случай «сырых» настроек (бот читает их из gist без DEFAULT_SETTINGS). */
@@ -190,7 +190,7 @@ function addTaskReminders(st, inWindow, add) {
     if (t.notes) parts.push(firstLine(t.notes));
     add({
       key: `task:${t.id}:${t.due}:${remind ?? 'd'}`, at, kind: 'task',
-      title: `${t.priority === 2 ? '🔥' : '✅'} Задача: ${t.title || 'без названия'}`,
+      title: `✅ Задача: ${t.title || 'без названия'}`,
       body: parts.join(' · '), url: './#/tasks', refId: t.id,
     });
   }
@@ -250,9 +250,10 @@ function addMilestones(st, now, inWindow, add) {
     const ct = cleanTime(h, logs, now);
     const sinceDate = msToYmd(ct.sinceMs);
     for (const d of MILESTONES) {
-      // первое «10:00», когда чистое время действительно ≥ d суток
+      // первое «10:00», когда чистое время действительно ≥ d суток (по настенным часам, как cleanTime)
+      const reachMs = toMs(addDays(sinceDate, d), msToHm(ct.sinceMs));
       let at = toMs(addDays(sinceDate, d), MILESTONE_TIME);
-      if (at < ct.sinceMs + d * DAY_MS) at = toMs(addDays(sinceDate, d + 1), MILESTONE_TIME);
+      if (at < reachMs) at = toMs(addDays(sinceDate, d + 1), MILESTONE_TIME);
       if (!inWindow(at) || quietIn(at, s)) continue;
       const sv = savings(h, logs, at);
       const next = nextMilestone(d);
