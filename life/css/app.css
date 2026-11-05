@@ -32,6 +32,7 @@
   --warn-soft: rgba(242, 192, 99, 0.14);
   --bad: #ff7b72;
   --bad-soft: rgba(255, 123, 114, 0.14);
+  --bad-strong: #d93f3f;       /* фон кнопок «опасное действие» (белый текст) */
   --info: #7cc4ff;
   --info-soft: rgba(124, 196, 255, 0.14);
 
@@ -82,6 +83,7 @@
   --warn-soft: rgba(201, 132, 0, 0.14);
   --bad: #cc3b33;
   --bad-soft: rgba(204, 59, 51, 0.11);
+  --bad-strong: #c8322b;
   --info: #1f6fbf;
   --info-soft: rgba(31, 111, 191, 0.12);
   --c-class: #3d6ee0;
@@ -115,6 +117,7 @@
     --warn-soft: rgba(201, 132, 0, 0.14);
     --bad: #cc3b33;
     --bad-soft: rgba(204, 59, 51, 0.11);
+    --bad-strong: #c8322b;
     --info: #1f6fbf;
     --info-soft: rgba(31, 111, 191, 0.12);
     --c-class: #3d6ee0;
@@ -641,8 +644,8 @@ a.item, button.item, .item[data-act] {
 .btn.ghost:hover { background: var(--surface-2); }
 .btn.danger { color: var(--bad); }
 .btn.danger:hover { background: var(--bad-soft); border-color: transparent; }
-.btn.primary.danger { background: var(--bad); color: #fff; }
-.btn.primary.danger:hover { filter: brightness(1.08); background: var(--bad); }
+.btn.primary.danger { background: var(--bad-strong); color: #fff; }
+.btn.primary.danger:hover { filter: brightness(1.08); background: var(--bad-strong); }
 .btn.sm { height: 34px; padding: 0 12px; font-size: 14px; border-radius: 10px; gap: 6px; }
 .btn.lg { height: 52px; padding: 0 22px; font-size: 16px; border-radius: 14px; }
 .btn.block { display: flex; width: 100%; }
@@ -773,6 +776,7 @@ a.item, button.item, .item[data-act] {
 
 .seg {
   display: inline-flex;
+  align-self: flex-start;
   padding: 3px;
   gap: 2px;
   border-radius: 13px;
@@ -805,7 +809,7 @@ a.item, button.item, .item[data-act] {
 .seg > .on { background: var(--surface-3); color: var(--text); box-shadow: var(--shadow-sm); }
 :root[data-theme="light"] .seg > .on { background: var(--surface); }
 @media (prefers-color-scheme: light) { :root[data-theme="auto"] .seg > .on { background: var(--surface); } }
-.seg.block { display: flex; width: 100%; }
+.seg.block { display: flex; width: 100%; align-self: stretch; }
 
 .tabs {
   display: flex;
@@ -1011,7 +1015,7 @@ a.item, button.item, .item[data-act] {
 .field-hint { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
 .field-error { font-size: 12.5px; color: var(--bad); font-weight: 500; }
 .field-control { position: relative; display: flex; align-items: center; min-width: 0; }
-.field-control > .input { flex: 1; }
+.field-control > :not(.input-unit) { flex: 1 1 auto; min-width: 0; }
 .input-unit {
   position: absolute;
   right: 14px;
@@ -1300,6 +1304,10 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 }
 
 .sheet-confirm .sheet-body { padding-bottom: 18px; }
+/* Шторка без заголовка: крестик в углу, текст сразу сверху. */
+.sheet.no-title .sheet-head { position: absolute; top: 10px; right: 0; z-index: 1; min-height: 0; padding: 6px 10px; }
+.sheet.no-title .sheet-title { display: none; }
+.sheet.no-title .sheet-body { padding-top: 22px; padding-right: 60px; }
 .confirm-text { font-size: 16px; line-height: 1.5; color: var(--text); white-space: pre-line; }
 
 @media (min-width: 900px) {

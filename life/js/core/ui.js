@@ -209,7 +209,7 @@ export function openSheet({ title = '', body = '', footer = null, onMount, onClo
   layer.style.zIndex = String(100 + sheetStack.length * 2);
   layer.innerHTML = String(html`
     <div class="sheet-backdrop" data-sheet-close></div>
-    <div class="sheet ${wide ? 'wide' : ''} ${className}" role="dialog" aria-modal="true" ${title ? raw(`aria-labelledby="${titleId}"`) : raw('aria-label="Окно"')} tabindex="-1">
+    <div class="sheet ${wide ? 'wide' : ''} ${title ? '' : 'no-title'} ${className}" role="dialog" aria-modal="true" ${title ? raw(`aria-labelledby="${titleId}"`) : raw('aria-label="Окно"')} tabindex="-1">
       <div class="sheet-handle" aria-hidden="true"><span></span></div>
       <header class="sheet-head">
         <h2 class="sheet-title" id="${titleId}">${title}</h2>
