@@ -940,15 +940,35 @@ function timeFields(startMs, endMs, allDay) {
 }
 
 /**
+ * Совпадают ли вхождения правила ICS (локальные дни и часы) с вхождениями recur
+ * приложения в днях [dFrom; dTo]. skipMs — начало, которое не сравнивать (DTSTART вне правила).
+ */
+function sameOccurrences(m, recur, date, dFrom, dTo, t, skipMs) {
+  if (dFrom > dTo) return true;
+  const icsDays = [];
+  for (const s of instanceStarts(m, toMs(dFrom), toMs(addDays(dTo, 1)) - 1)) {
+    if (!t.allDay && (msToHm(s) !== t.startHm || (t.durMs != null && msToHm(s + t.durMs) !== t.endHm))) return false;
+    if (s !== skipMs) icsDays.push(msToYmd(s));
+  }
+  const appDays = [];
+  for (let d = dFrom; d <= dTo; d = addDays(d, 1)) if (appRuleOccurs(recur, date, d)) appDays.push(d);
+  return icsDays.join(',') === appDays.join(',');
+}
+
+/** Сколько дней истории до fromYmd проверять при импорте серии. */
+const VERIFY_PAST_DAYS = 400;
+
+/**
  * Простое правило → recur приложения, если оно даёт в точности те же дни и часы
- * (проверяется развёрткой на год вперёд: иначе разница зон/летнего времени исказила бы время).
- * → массив событий-полей (основное + отдельные вхождения) или null (развернуть по одному).
+ * (проверяется развёрткой на год назад и вперёд: иначе разница зон/летнего времени
+ * исказила бы время). Если расходится только прошлое — серия начинается с первого
+ * вхождения не раньше from. → массив событий-полей или null (развернуть по одному).
  */
 function mapSimpleSeries(m, overrides, from, horizon) {
   const r = m.rrule;
   if (!r || (m.rdates && m.rdates.length) || r.unsupported.length || r.bysetpos.length || r.bymonth.length) return null;
   const allDay = !!m.start.allDay;
-  const date = msToYmd(m.start.ms);
+  let date = msToYmd(m.start.ms);
   let freq, days = [];
   switch (r.freq) {
     case 'DAILY':
@@ -981,20 +1001,20 @@ function mapSimpleSeries(m, overrides, from, horizon) {
   if (r.count || r.untilMs != null) recur.until = msToYmd(lastInstanceMs(m) ?? m.start.ms);
 
   // проверка: вхождения ICS == вхождения recur приложения
-  const aligned = appRuleOccurs(recur, date, date);
-  const vFrom = date > from ? date : from;
-  const vTo0 = addDays(from, Math.max(horizon, 400));
+  const t = { allDay, startHm, endHm, durMs };
+  let aligned = appRuleOccurs(recur, date, date);
+  const vTo0 = addDays(from, Math.max(horizon, VERIFY_PAST_DAYS));
   const vTo = recur.until && recur.until < vTo0 ? recur.until : vTo0;
-  if (vFrom <= vTo) {
-    const icsDays = [];
-    for (const s of instanceStarts(m, toMs(vFrom), toMs(addDays(vTo, 1)) - 1)) {
-      if (!allDay && (msToHm(s) !== startHm || (durMs != null && msToHm(s + durMs) !== endHm))) return null;
-      if (!aligned && s === m.start.ms) continue;
-      icsDays.push(msToYmd(s));
-    }
-    const appDays = [];
-    for (let d = vFrom; d <= vTo; d = addDays(d, 1)) if (appRuleOccurs(recur, date, d)) appDays.push(d);
-    if (icsDays.join(',') !== appDays.join(',')) return null;
+  const max = (a, b) => (a > b ? a : b);
+  const past = max(date, addDays(from, -VERIFY_PAST_DAYS));
+  const skip = aligned ? null : m.start.ms;
+  if (!sameOccurrences(m, recur, date, past, vTo, t, skip)) {
+    // расходится история (переход на летнее время до from)? — начать серию с первого вхождения ≥ from
+    if (date >= from || !sameOccurrences(m, recur, date, from, vTo, t, skip)) return null;
+    const firstMs = instanceStarts(m, toMs(from), toMs(addDays(vTo, 1)) - 1)[0];
+    if (firstMs == null) return null;
+    date = msToYmd(firstMs);
+    aligned = true;
   }
 
   const ex = new Set((m.exdates || []).map(msToYmd));

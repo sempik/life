@@ -1,0 +1,38 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Example Corp//Webinar Platform 3.2//EN
+X-WR-CALNAME:Вебинары
+this line is garbage without a colon
+BEGIN:VEVENT
+UID:webinar-2026-11-12-ml@example.com
+DTSTAMP:20261101T120000Z
+DTSTART:20261112T150000Z
+DTEND:20261112T163000Z
+SUMMARY:Вебинар: введение в машинное обучение
+DESCRIPTION:Спикер — Иванов И. И.\NЗапись будет доступна после эфира. Путь: C:\\Webinars\\ML\; файлы\, слайды
+URL:https://example.com/webinars/ml-intro?utm=cal
+CATEGORIES:Обучение,ML\, AI
+CATEGORIES:Вебинар
+STATUS:CONFIRMED
+END:VEVENT
+;;;garbage;;;
+:also garbage
+BEGIN:VEVENT
+UID:floating-gym@example.com
+DTSTAMP:20261101T120000Z
+DTSTART:20261113T073000
+DURATION:PT45M
+SUMMARY:Зарядка (плавающее время)
+END:VEVENT
+BEGIN:VEVENT
+UID:unknown-tz@example.com
+DTSTAMP:20261101T120000Z
+DTSTART;TZID=Mars/Olympus_Mons:20261114T090000
+DTEND;TZID=Mars/Olympus_Mons:20261114T100000
+SUMMARY:Неизвестная зона
+END:VEVENT
+BEGIN:VEVENT
+UID:no-dtstart@example.com
+SUMMARY:Без начала — должно быть пропущено
+END:VEVENT
+END:VCALENDAR
