@@ -8,6 +8,9 @@
 .p-tasks .tk-search-btn { width: 40px; height: 40px; color: var(--text-2); }
 .p-tasks .tk-search-btn.on { background: var(--text); color: var(--on-text); border-color: transparent; }
 .p-tasks .tk-new-btn { height: 40px; }
+@media (max-width: 899.98px) {
+  .p-tasks .tk-new-btn { display: none; }
+}
 
 /* --- раскладка ------------------------------------------------------------ */
 .p-tasks .tk-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
@@ -152,7 +155,7 @@
 }
 @media (min-width: 900px) {
   .p-tasks .tk-search-btn { display: none; }
-  .p-tasks .tk-search { display: block; flex: 0 1 280px; margin-left: auto; }
+  .p-tasks .tk-search { display: block; flex: 1 1 180px; max-width: 320px; margin-left: auto; }
   .p-tasks .tk-search .input { height: 40px; }
   .p-tasks .tk-tags { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
   .p-tasks .tk-tag-chip { height: 32px; }
@@ -214,7 +217,7 @@
   .p-tasks .tk-item:hover { background: var(--surface-2); }
   .p-tasks .tk-item:hover .tk-del, .p-tasks .tk-del:focus-visible { opacity: 1; }
 }
-@media (hover: none) {
+@media (hover: none), (max-width: 899.98px) {
   .p-tasks .tk-del { display: none; }
 }
 
@@ -336,9 +339,10 @@
 .p-tasks .tk-kpis .kpi-label { font-size: 12px; line-height: 1.25; }
 .p-tasks .tk-progress { display: flex; flex-direction: column; gap: 7px; margin-top: 16px; }
 .p-tasks .tk-progress .progress > span { background: var(--ok); }
-.p-tasks .tk-help-rows { display: flex; flex-direction: column; gap: 9px; }
-.p-tasks .tk-help-rows > div { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
-.p-tasks .tk-help-rows .muted { margin-left: 3px; }
+.p-tasks .tk-help-rows { display: flex; flex-direction: column; gap: 10px; }
+.p-tasks .tk-help-row { display: grid; grid-template-columns: 70px minmax(0, 1fr); align-items: start; gap: 8px; }
+.p-tasks .tk-help-l { padding-top: 3px; color: var(--muted); }
+.p-tasks .tk-help-v { display: flex; flex-wrap: wrap; gap: 5px; }
 .p-tasks .tk-kbd {
   display: inline-flex;
   align-items: center;

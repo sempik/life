@@ -59,6 +59,12 @@ const REPEAT_OPTS = [
 const DONE_PREVIEW = 50;
 const DONE_PAGE = 100;
 const CLEAR_AFTER_DAYS = 30;
+const HELP_ROWS = [
+  ['Срок', ['завтра', 'пт', '15.11', 'через 3 дня']],
+  ['Время', ['в 18:00', 'к 10 утра', 'вечером']],
+  ['Важность', ['!', '!!', 'срочно']],
+  ['Тег', ['#учёба']],
+];
 const EXAMPLES = [
   'сдать лабу пт 18:00 ! #учёба',
   'купить продукты завтра вечером #дом',
@@ -373,10 +379,7 @@ function asideHtml(all, c) {
     <section class="card tk-help">
       <div class="card-head"><div class="card-title">${icon('sparkles', 18)}Быстрый ввод</div></div>
       <div class="tk-help-rows small">
-        <div><span class="tk-kbd">завтра</span><span class="tk-kbd">пт</span><span class="tk-kbd">15.11</span><span class="tk-kbd">через 3 дня</span><span class="muted">срок</span></div>
-        <div><span class="tk-kbd">в 18:00</span><span class="tk-kbd">к 10 утра</span><span class="tk-kbd">вечером</span><span class="muted">время</span></div>
-        <div><span class="tk-kbd">!</span><span class="tk-kbd">!!</span><span class="tk-kbd">срочно</span><span class="muted">важность</span></div>
-        <div><span class="tk-kbd">#учёба</span><span class="muted">тег</span></div>
+        ${HELP_ROWS.map(([label, keys]) => html`<div class="tk-help-row"><span class="tk-help-l">${label}</span><span class="tk-help-v">${keys.map(k => html`<span class="tk-kbd">${k}</span>`)}</span></div>`)}
       </div>
       <div class="tk-examples">
         <div class="muted small">Попробуй:</div>

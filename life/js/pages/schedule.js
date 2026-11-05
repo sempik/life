@@ -170,11 +170,14 @@ function layoutColumns(segs, minLen = 30) {
   return out;
 }
 
-/** Часы сетки недели: от min(07:00, раньше всех) до max(22:00, позже всех). */
+/**
+ * Часы сетки недели: от min(07:00, раньше всех) до max(22:00, позже всех).
+ * Хвосты ночных событий со вчера (cont) начало сетки не сдвигают — их блок прижимается к верху.
+ */
 function gridHours(segs, { from = 7, to = 22 } = {}) {
   let a = from * 60, b = to * 60;
   for (const x of segs) {
-    a = Math.min(a, x.s);
+    if (!x.cont) a = Math.min(a, x.s);
     b = Math.max(b, Math.min(1440, Math.max(x.e, x.s + 30)));
   }
   return { start: Math.max(0, Math.floor(a / 60)), end: Math.min(24, Math.ceil(b / 60)) };
@@ -185,7 +188,7 @@ function gridHours(segs, { from = 7, to = 22 } = {}) {
  * и линия «сейчас». items — вхождения со временем, отсортированные по startMs.
  * → [{ kind: 'occ'|'ghost', occ } | { kind: 'gap', min, rest } | { kind: 'now', at }]
  */
-function agendaRows(items, { now = Date.now(), showNow = false, gapMin = GAP_MIN } = {}) {
+function agendaRows(items, { now = Date.now(), showNow = false, gapMin = GAP_MIN, dayStart = -Infinity } = {}) {
   const out = [];
   const ongoing = showNow && items.some(o => !o.ghost && o.startMs <= now && o.endMs > now);
   let nowDone = !showNow || ongoing;
@@ -205,7 +208,8 @@ function agendaRows(items, { now = Date.now(), showNow = false, gapMin = GAP_MIN
       }
     } else if (hasGap) out.push({ kind: 'gap', min: mins(maxEnd, o.startMs), rest: false });
     out.push({ kind: o.ghost ? 'ghost' : 'occ', occ: o });
-    if (!o.ghost) maxEnd = Math.max(maxEnd ?? -Infinity, o.endMs);
+    // Хвост ночного события со вчера не открывает «свободное окно» (это ночь, а не перерыв).
+    if (!o.ghost && o.startMs >= dayStart) maxEnd = Math.max(maxEnd ?? -Infinity, o.endMs);
   }
   if (!nowDone && items.some(o => !o.ghost)) out.push({ kind: 'now', at: now });
   return out;
@@ -488,7 +492,7 @@ function agendaCard(ctx, occs) {
   const timed = occs.filter(o => !o.allDay);
   const ghosts = cancelledGhosts(ctx.changes, occs, date, st.sources);
   const items = [...timed, ...ghosts].sort((a, b) => a.startMs - b.startMs);
-  const rows = agendaRows(items, { now, showNow: date === t });
+  const rows = agendaRows(items, { now, showNow: date === t, dayStart: toMs(date) });
 
   const rel = fmtDayLabel(date, t);
   const full = `${DOW_FULL[isoDow(date) - 1]}, ${fmtDate(date)}`;
@@ -666,8 +670,8 @@ function changesCard(ctx, weekFrom) {
   if (!list.length) return '';
   return html`<section class="card sc-changes" aria-label="Изменения на сайтах">
     <div class="card-head">
-      <div class="card-title">${icon('history', 18)}<span>Изменения на неделе</span><span class="badge warn">${list.length}</span></div>
-      <div class="actions"><a class="btn ghost sm" href="#/sources">Источники</a></div>
+      <div class="card-title">${icon('history', 18)}<span>Изменения</span><span class="badge warn">${list.length}</span></div>
+      <div class="actions"><a class="btn ghost sm sc-more" href="#/sources">Источники${icon('chevron-right', 16)}</a></div>
     </div>
     <div class="list">
       ${list.map(c => html`<button type="button" class="item sc-change" data-act="pick" data-date="${msToYmd(c.when)}">
@@ -728,8 +732,11 @@ function weekBlock(x, ctx, h0) {
   const o = x.occ;
   const ref = refOf(o);
   refs.set(ref, o);
-  const top = (x.s - h0 * 60) / 60;
-  const len = Math.max(x.e - x.s, 1) / 60;
+  // Хвост со вчера, целиком выше начала сетки, — короткий блок у верхнего края.
+  const s0 = Math.max(x.s, h0 * 60);
+  const e0 = Math.max(x.e, s0 + (x.cont && x.e <= h0 * 60 ? 25 : 1));
+  const top = (s0 - h0 * 60) / 60;
+  const len = (e0 - s0) / 60;
   const conf = conflictsFor(o, ctx.conflicts);
   const ch = changesFor(o, ctx.changes)[0];
   const cls = [
@@ -1579,8 +1586,9 @@ function occBody(o) {
   // Напоминания
   let remMain, remSub = '';
   if (o.external) {
-    remMain = src?.remind ? remText(s.defaultReminders?.[type] || []) || 'без напоминаний' : 'Не напоминаю';
-    remSub = src?.remind ? 'как о своих событиях' : 'о событиях с сайта — включается в настройках источника';
+    const list = [...(s.defaultReminders?.[type] || [])].sort((a, b) => b - a);
+    remMain = src?.remind && list.length ? cap(remText(list)) : 'Без напоминаний';
+    remSub = src?.remind ? 'как о своих событиях' : 'для событий с сайта включаются в настройках источника';
   } else if (o.reminders == null) {
     const list = [...(s.defaultReminders?.[type] || [])].sort((a, b) => b - a);
     remMain = list.length ? cap(remText(list)) : 'Без напоминаний';

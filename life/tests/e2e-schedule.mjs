@@ -174,7 +174,11 @@ async function checkFreshViews(h) {
   const def = await h.evaluate(() => [...document.querySelectorAll('.p-schedule .sc-views button')].find(b => b.classList.contains('on'))?.dataset.view);
   if (def !== (h.vp === 'mobile' ? 'day' : 'week')) h.error('schedule', `вид по умолчанию на ${h.vp}: ${def}`);
 
-  // Неделя через переключатель.
+  // Неделя через переключатель (на ПК неделя уже по умолчанию — сначала «День»).
+  if (h.vp === 'desktop') {
+    await h.page.locator('.p-schedule .sc-views button[data-view="day"]').click();
+    await h.settle(200);
+  }
   await h.page.locator('.p-schedule .sc-views button[data-view="week"]').click();
   await h.settle(250);
   const w = await h.evaluate(() => ({
