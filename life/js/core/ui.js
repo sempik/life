@@ -361,7 +361,7 @@ function renderControl(f, v, id) {
     case 'days': {
       const set = new Set((Array.isArray(v) ? v : []).map(Number));
       return html`<div class="days" role="group" aria-labelledby="${id}-label">
-        ${DOW_SHORT.map((d, i) => html`<button type="button" class="chip day ${set.has(i + 1) ? 'on' : ''}" data-day="${i + 1}" aria-pressed="${set.has(i + 1)}">${d}</button>`)}
+        ${DOW_SHORT.map((d, i) => html`<button type="button" class="chip day ${set.has(i + 1) ? 'on' : ''}" data-day="${i + 1}" aria-pressed="${String(set.has(i + 1))}">${d}</button>`)}
       </div>`;
     }
     case 'chips': {
@@ -369,15 +369,15 @@ function renderControl(f, v, id) {
       return html`<div class="chips" role="group" aria-labelledby="${id}-label">
         ${(f.options || []).map((o, i) => {
           const on = sel.some(x => sameVal(x, o.value));
-          return html`<button type="button" class="chip ${on ? 'on' : ''}" data-idx="${i}" aria-pressed="${on}">${o.icon ? icon(o.icon, 16) : ''}${o.label ?? o.value}</button>`;
+          return html`<button type="button" class="chip ${on ? 'on' : ''}" data-idx="${i}" aria-pressed="${String(on)}">${o.icon ? icon(o.icon, 16) : ''}${o.label ?? o.value}</button>`;
         })}
       </div>`;
     }
     case 'color': {
       const palette = v && !COLORS.includes(v) && safeColor(v) ? [...COLORS, v] : COLORS;
       return html`<div class="swatches" role="group" aria-labelledby="${id}-label">
-        <button type="button" class="swatch none ${v ? '' : 'on'}" data-color="" aria-pressed="${!v}" title="Без цвета" aria-label="Без цвета"></button>
-        ${palette.map(c => html`<button type="button" class="swatch ${c === v ? 'on' : ''}" data-color="${c}" style="--sw:${safeColor(c)}" aria-pressed="${c === v}" aria-label="Цвет ${c}"></button>`)}
+        <button type="button" class="swatch none ${v ? '' : 'on'}" data-color="" aria-pressed="${String(!v)}" title="Без цвета" aria-label="Без цвета"></button>
+        ${palette.map(c => html`<button type="button" class="swatch ${c === v ? 'on' : ''}" data-color="${c}" style="--sw:${safeColor(c)}" aria-pressed="${String(c === v)}" aria-label="Цвет ${c}"></button>`)}
       </div>`;
     }
     case 'emoji':

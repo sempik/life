@@ -293,7 +293,9 @@ function updateSyncUi() {
 function isTyping(root) {
   const a = document.activeElement;
   if (!a || !root?.contains(a)) return false;
-  return a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
+  if (a.isContentEditable || /^(TEXTAREA|SELECT)$/.test(a.tagName)) return true;
+  // Переключатели/флажки/кнопки-радио не «печатают» — перерисовку из-за них не откладываем.
+  return a.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|reset|range|color|file)$/i.test(a.type || '');
 }
 
 function scheduleRerender() {

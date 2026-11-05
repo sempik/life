@@ -1092,7 +1092,7 @@ const ACTIONS = {
     rerenderKeepFocus(`[data-act="table"][data-id="${CSS.escape(id)}"]`);
   },
   settings: () => navigate('settings'),
-  'add-meal': () => pageCall('food', 'openMealForm'),
+  'add-meal': () => pageCall('food', 'openFoodSearch'),
   'add-water': () => pageCall('food', 'addWater', 250),
   'add-weight': () => addWeight(),
   'add-habit': () => pageCall('habits', 'openHabitForm'),

@@ -602,8 +602,12 @@ function sourceCard(src, vm) {
   else if (snap && !snap.ok) status = `Не загрузилось${Number(snap.fetchedAt) > 0 ? ` · ${relAgo(Number(snap.fetchedAt), vm.now)}` : ''}`;
   else status = describeSnapshot(snap, vm.now);
   // Удачный снимок есть, но последняя попытка из браузера не удалась (sync оставляет старый снимок).
-  const failed = lastErrors.get(String(src.id));
-  const lateErr = snap?.ok && failed && failed.at > (Number(snap.fetchedAt) || 0) ? failed : null;
+  // Бот при неудаче тоже оставляет старый снимок и дописывает lastError/lastErrorAt.
+  const botFailed = snap?.ok && snap.lastError && Number(snap.lastErrorAt) > 0
+    ? { at: Number(snap.lastErrorAt), error: String(snap.lastError) } : null;
+  const browserFailed = lastErrors.get(String(src.id));
+  const failed = [browserFailed, botFailed].filter(Boolean).sort((a, b) => b.at - a.at)[0] || null;
+  const lateErr = snap?.ok && failed && failed.at > (Number(snap.fetchedAt) || 0) - 1 ? failed : null;
   const unseen = vm.changes.filter(c => !c.seen && String(c.sourceId) === String(src.id)).length;
 
   let info = '';

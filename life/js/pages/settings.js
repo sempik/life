@@ -21,7 +21,7 @@ import { normalizeData } from '../lib/merge.js';
 import { formatReminder } from '../lib/reminders.js';
 
 /** Версия приложения — та же строка, что VERSION в sw.js (обновлять вместе). */
-export const APP_VERSION = '2026.11.05-1';
+export const APP_VERSION = '2026.11.05-2';
 
 const TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=Life%20manager';
 const BOTFATHER_URL = 'https://t.me/BotFather';
@@ -1039,7 +1039,7 @@ function cardBotSteps(s, repo, st, on) {
       </li>
       <li>
         <div class="st-step-t">Первый запуск</div>
-        <div class="st-step-d">Открой workflow «Life bot» → «Run workflow». Дальше он будет запускаться сам.</div>
+        <div class="st-step-d">Открой workflow «life-bot» → «Run workflow». Дальше он будет запускаться сам.</div>
         <div class="row wrap st-btns">${linkBtn(links?.workflow, 'Открыть Actions', { ic: 'play' })}</div>
       </li>
     </ol>`);

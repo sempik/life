@@ -122,7 +122,10 @@ async function runQuick(id) {
   switch (id) {
     case 'event': return (await import('./pages/schedule.js')).openEventForm?.();
     case 'task': return (await import('./pages/tasks.js')).openTaskForm?.();
-    case 'meal': return (await import('./pages/food.js')).openMealForm?.();
+    case 'meal': {
+      const m = await import('./pages/food.js');
+      return m.openFoodSearch ? m.openFoodSearch() : m.openMealForm?.();
+    }
     case 'water': {
       await (await import('./pages/food.js')).addWater?.(250);
       return;

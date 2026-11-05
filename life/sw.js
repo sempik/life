@@ -6,7 +6,7 @@
  */
 'use strict';
 
-const VERSION = '2026.11.05-1';
+const VERSION = '2026.11.05-2';
 const SHELL_CACHE = 'life-shell-' + VERSION;
 const FONT_CACHE = 'life-fonts-v1';
 const NETWORK_TIMEOUT_MS = 4000;
