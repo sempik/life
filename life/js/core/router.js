@@ -223,6 +223,9 @@ function markActive() {
     if (on) el.setAttribute('aria-current', 'page');
     else el.removeAttribute('aria-current');
   }
+  // Раздел из «Ещё» (или любой без вкладки) — подсвечиваем кнопку «Ещё» в шапке.
+  const inMore = !!id && !TAB_ORDER.includes(id);
+  for (const el of $$('[data-more]')) el.classList.toggle('active', inMore);
 }
 
 function onGlobalClick(e) {

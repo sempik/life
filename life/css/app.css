@@ -243,6 +243,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
 .topbar.show-title .topbar-title { opacity: 1; transform: none; }
 .topbar .icon-btn[data-sync-status] { color: var(--muted); }
 .topbar .icon-btn[data-sync-status][data-state="error"] { color: var(--bad); }
+.topbar .icon-btn[data-more].active { background: var(--surface-2); color: var(--text); }
 
 .view {
   display: block;

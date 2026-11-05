@@ -16,8 +16,13 @@
 //   4. проходит все маршруты (пустые данные, затем демо-данные), снимает скриншоты;
 //   5. открывает шторку «Добавить», проверяет регистрацию Service Worker и работу
 //      офлайн после первой загрузки (сервер «падает» + context.setOffline(true) + reload);
-//   6. проверки в консоли страницы: напоминания по демо-данным на 24 ч, sync выключен.
+//   6. проверки в консоли страницы: напоминания по демо-данным на 24 ч, sync выключен и не
+//      ходит в сеть, очередь уведомлений + тестовое уведомление, источник ICS с «сайта»
+//      (/__e2e/schedule.ics на том же сервере) → снимок → повестка → изменение после переноса,
+//      шторка «Ещё» (телефон), светлая тема, манифест и его иконки.
 // Выход с кодом 1 и списком ошибок, если что-то не так.
+// Нужен Playwright с Chromium (npm i -D playwright && npx playwright install chromium);
+// пакет ищется локально, через NODE_PATH и в глобальном npm.
 //
 // Расширение: добавляйте маршруту `check(h)` в ROUTES или элемент в CHECKS
 // ({ name, phase: 'fresh'|'demo'|'final', viewports?, run(h) }) — см. «Помощник h» ниже.
@@ -95,6 +100,7 @@ export const CHECKS = [
   { name: 'reminders-demo', phase: 'fresh', run: checkRemindersSanity },
   { name: 'sync-off', phase: 'fresh', run: checkSyncOff },
   { name: 'manifest', phase: 'fresh', viewports: ['desktop'], run: checkManifest },
+  { name: 'notify-queue', phase: 'demo', run: checkNotifyQueue },
   { name: 'sources-ics', phase: 'demo', run: checkSourcesPipeline },
   { name: 'theme-light', phase: 'final', run: checkLightTheme },
 ];
@@ -305,7 +311,15 @@ export async function run({
   const vpNames = Object.keys(VIEWPORTS).filter(n => !only || n === only);
   const log = (...a) => { if (verbose) console.log('  ·', ...a); };
 
-  const browser = await chromium.launch({ headless: !headed });
+  // Новый headless-режим (channel 'chromium') умеет уведомления; старый headless shell — нет.
+  let browser, legacyHeadless = false;
+  try {
+    browser = await chromium.launch({ headless: !headed, channel: 'chromium' });
+  } catch {
+    browser = await chromium.launch({ headless: !headed });
+    legacyHeadless = !headed;
+    notes.push('Chromium в старом headless-режиме: уведомления недоступны, их проверка пропущена');
+  }
   const killer = setTimeout(() => {
     errors.push({ vp: '-', phase: '-', kind: 'timeout', message: `тест не уложился в ${timeoutMs / 1000} с` });
     browser.close().catch(() => {});
@@ -315,6 +329,7 @@ export async function run({
     for (const vp of vpNames) {
       console.log(`▶ ${vp}`);
       const h = await openContext({ browser, server, appUrl, vp, errors, notes, shots, shotFiles, log, timezoneId });
+      h.legacyHeadless = legacyHeadless;
       try {
         await scenario(h, { routeList, demo, offline, checks });
       } catch (err) {
@@ -349,6 +364,7 @@ export async function run({
  *   h.evaluate(fn, arg) — page.evaluate (модули импортируются как import('./js/...'))
  *   h.closeSheets(), h.clearToasts(), h.loadDemo()
  *   h.externalRequests — запросы к чужим сайтам (url), h.offline — идёт офлайн-фаза
+ *   h.legacyHeadless — старый headless Chromium (Notification.permission всегда 'denied')
  */
 async function openContext({ browser, server, appUrl, vp, errors, notes, shots, shotFiles, log, timezoneId }) {
   const context = await browser.newContext({
@@ -621,6 +637,38 @@ async function checkLightTheme(h) {
   await h.shot('light-today');
   await setTheme('dark');
   await h.settle(200);
+}
+
+/** Очередь уведомлений по демо-данным: пересчёт → IDB 'notifQueue' (её читает SW) и upcoming() для интерфейса. */
+async function checkNotifyQueue(h) {
+  const r = await h.evaluate(async () => {
+    const [notify, db] = await Promise.all([import('./js/core/notify.js'), import('./js/core/db.js')]);
+    await notify.reschedule();
+    const queue = (await db.get('notifQueue')) || [];
+    const up = notify.upcoming(5);
+    let testResult = null, shown = -1;
+    if (notify.permission() === 'granted') {
+      testResult = await notify.test();
+      const reg = await navigator.serviceWorker.getRegistration();
+      shown = reg ? (await reg.getNotifications({ tag: 'life-test' })).length : -1;
+    }
+    return {
+      testResult, shown,
+      permission: notify.permission(),
+      queue: queue.length,
+      badQueue: queue.filter(x => !x || !x.key || typeof x.at !== 'number' || !x.title || !x.url).length,
+      upcoming: up.length,
+      sorted: up.every((x, i) => i === 0 || up[i - 1].at <= x.at),
+    };
+  });
+  if (r.permission !== 'granted' && !h.legacyHeadless) h.error('notify', `разрешение на уведомления: ${r.permission}`);
+  if (!r.queue) h.error('notify', 'очередь notifQueue пуста при демо-данных');
+  if (r.badQueue) h.error('notify', `в очереди ${r.badQueue} элементов без key/at/title/url`);
+  if (!r.upcoming) h.error('notify', 'upcoming() пуст при демо-данных');
+  if (!r.sorted) h.error('notify', 'upcoming() не отсортирован по времени');
+  if (r.testResult !== null && r.testResult !== '') h.error('notify', `test(): ${r.testResult}`);
+  if (r.testResult === '' && r.shown === 0) h.error('notify', 'test() не показал уведомление через Service Worker');
+  h.note(`уведомления: в очереди ${r.queue}, upcoming(5) → ${r.upcoming}, тестовое: ${r.testResult === '' ? `показано (${r.shown})` : r.testResult ?? 'пропущено'}`);
 }
 
 /** Источник ICS с «сайта» (тот же сервер): загрузка → снимок → повестка → изменение после переноса пары. */
