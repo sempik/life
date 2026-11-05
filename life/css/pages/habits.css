@@ -447,6 +447,12 @@
 
 /* --- быстрая отметка --------------------------------------------------------------- */
 .sh-habit-quick .hb-q-group + .hb-q-group { margin-top: 14px; }
+.sh-habit-quick .hb-q-cheer { margin-bottom: 12px; align-items: flex-start; flex-wrap: wrap; animation: hb-cheer 0.3s var(--ease) both; }
+@keyframes hb-cheer { from { opacity: 0; transform: translateY(-6px); } }
+.sh-habit-quick .hb-q-cheer-ico { font-size: 20px; line-height: 1.2; }
+.sh-habit-quick .hb-q-cheer b { color: var(--ok); }
+.sh-habit-quick .hb-q-cheer-tip { margin-top: 3px; color: var(--text-2); font-size: 13.5px; line-height: 1.45; }
+.sh-habit-quick .hb-q-cheer-acts { display: flex; align-items: center; gap: 2px; margin: -6px -6px -6px auto; }
 .sh-habit-quick .hb-q-title { margin-bottom: 2px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .sh-habit-quick .hb-q-item {
   display: grid;

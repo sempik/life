@@ -634,9 +634,16 @@ async function checkQuick(h) {
   }
   const s = await habitBy(h, 'Курение');
   if (s) {
+    const c0 = (await todayLogs(h, s.id, 'craving')).length;
     await q.locator(`[data-act="q-crave"][data-id="${s.id}"]`).click();
     await h.settle(250);
-    expect(h, (await toasts(h)).some(t => /победа/.test(t)), 'быстрая «Хочется»: нет тоста');
+    const cheer = await q.locator('.hb-q-cheer').innerText().catch(() => '');
+    expect(h, /победа/.test(cheer) && (await todayLogs(h, s.id, 'craving')).length === c0 + 1, `быстрая «Хочется»: «${cheer}»`);
+    expect(h, !(await toasts(h)).length, 'быстрая «Хочется»: тост перекрывает шторку');
+    await shot(h, 'quick-cheer');
+    await q.locator('[data-act="q-cheer-undo"]').click();
+    await h.settle(250);
+    expect(h, (await todayLogs(h, s.id, 'craving')).length === c0 && !(await q.locator('.hb-q-cheer').count()), 'быстрая «Хочется»: «Отменить» не сработало');
     await q.locator(`[data-act="q-slip"][data-id="${s.id}"]`).click();
     await waitSheet(h, 'sh-habit-slip');
     await closeTop(h);

@@ -1555,31 +1555,46 @@ function formInner(fv, formId, editing) {
 /** Шторка со всеми активными привычками и действиями в одно нажатие. Обновляется на лету. */
 export function openHabitQuick() {
   if (quick) return quick.handle;
-  const q = {};
+  const q = { cheer: null };
   const handle = openSheet({
     title: 'Отметить привычку',
     className: 'sh-hb sh-habit-quick',
-    body: quickBody(),
+    body: quickBody(q),
     footer: html`<a class="btn ghost" href="#/habits" data-sheet-close>Все привычки</a><span class="spacer"></span><button type="button" class="btn" data-act="q-add">${icon('plus', 18)}<span>Новая</span></button>`,
-    onMount(el, close) { el.addEventListener('click', e => onQuickClick(e, close)); },
+    onMount(el, close) { el.addEventListener('click', e => onQuickClick(e, close, q)); },
     onClose() { q.off?.(); if (quick === q) quick = null; },
   });
   q.handle = handle;
   q.el = handle.el;
-  q.off = store.on(({ colls }) => {
-    if (!colls.has('habits') && !colls.has('habitLogs')) return;
+  q.redraw = () => {
     const body = q.el.querySelector('.sheet-body');
     const top = body.scrollTop;
     const focus = rememberFocus(body);
-    body.innerHTML = String(quickBody());
+    body.innerHTML = String(quickBody(q));
     body.scrollTop = top;
     restoreFocus(body, focus);
+  };
+  q.off = store.on(({ colls }) => {
+    if (colls.has('habits') || colls.has('habitLogs')) q.redraw();
   });
   quick = q;
   return handle;
 }
 
-function quickBody() {
+/** Поддержка после «Хочется» прямо в шторке (тост закрывал бы строки на телефоне). */
+function cheerHtml(c) {
+  if (!c) return '';
+  return html`<div class="alert ok hb-q-cheer" role="status">
+    <span class="hb-q-cheer-ico" aria-hidden="true">💪</span>
+    <div><b>Это победа! Ты удержался уже ${pluralN(c.n, TIMES_FORMS)}.</b><div class="hb-q-cheer-tip">${TIPS[c.tip]}</div></div>
+    <div class="hb-q-cheer-acts">
+      <button type="button" class="btn sm ghost" data-act="q-cheer-undo">Отменить</button>
+      <button type="button" class="icon-btn sm" data-act="q-cheer-x" aria-label="Скрыть">${icon('x', 18)}</button>
+    </div>
+  </div>`;
+}
+
+function quickBody(q = null) {
   const ctx = snapshot();
   const active = ctx.habits.filter(h => !h.archived);
   if (!active.length) {
@@ -1592,7 +1607,7 @@ function quickBody() {
     ${title ? html`<div class="hb-q-title">${title}</div>` : ''}
     <div class="list hb-q-list">${list.map(h => quickItem(h, ctx))}</div>
   </div>` : '');
-  return html`${group(goodToday.length && (bad.length || goodOther.length) ? 'Сегодня' : '', goodToday)}${group(bad.length && (goodToday.length || goodOther.length) ? 'Вредные' : '', bad)}${group('Не по плану сегодня', goodOther)}`;
+  return html`${cheerHtml(q?.cheer)}${group(goodToday.length && (bad.length || goodOther.length) ? 'Сегодня' : '', goodToday)}${group(bad.length && (goodToday.length || goodOther.length) ? 'Вредные' : '', bad)}${group('Не по плану сегодня', goodOther)}`;
 }
 
 function quickItem(h, ctx) {
@@ -1626,7 +1641,7 @@ function quickItem(h, ctx) {
   </div>`;
 }
 
-function onQuickClick(e, close) {
+function onQuickClick(e, close, q) {
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const id = b.dataset.id;
@@ -1634,7 +1649,20 @@ function onQuickClick(e, close) {
     case 'q-add': close(); openHabitForm(); break;
     case 'q-toggle': b.classList.toggle('on'); toggleGood(id); break;
     case 'q-inc': logHabit(id, 'done', 1); break;
-    case 'q-crave': logHabit(id, 'craving', 1); break;
+    case 'q-crave': {
+      const rec = logHabit(id, 'craving', 1, todayYmd(), { toast: false });
+      if (!rec) break;
+      q.cheer = { logId: rec.id, n: totals(logsOfHabit(id)).cravings, tip: pickTip(q.cheer?.tip ?? -1) };
+      q.redraw();
+      q.el.querySelector('.sheet-body').scrollTop = 0;
+      break;
+    }
+    case 'q-cheer-undo':
+      if (q.cheer) store.remove('habitLogs', q.cheer.logId);
+      q.cheer = null;
+      q.redraw();
+      break;
+    case 'q-cheer-x': q.cheer = null; q.redraw(); break;
     case 'q-slip': openSlipSheet(id); break;
     case 'q-lim': logHabit(id, 'slip', 1); break;
     default: break;

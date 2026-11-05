@@ -512,13 +512,13 @@
 .sh-fs .fs-pv-m { display: inline-flex; align-items: baseline; gap: 4px; font-size: 13px; color: var(--muted); }
 .sh-fs .fs-pv-m i { align-self: center; width: 7px; height: 7px; border-radius: 50%; background: var(--mc); }
 .sh-fs .fs-pv-m b { color: var(--text); font-size: 15px; font-weight: 600; }
-.sh-fs .fs-when { display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: 12px; align-items: end; }
+.sh-fs .fs-when { display: grid; grid-template-columns: minmax(0, 1fr) 156px; gap: 12px; align-items: end; }
 .sh-fs .fs-meal-seg { height: 46px; padding: 4px; }
 .sh-fs .fs-meal-seg > button { height: 36px; padding: 0 6px; min-width: 0; flex: 1 1 0; }
 .sh-fs .fs-date-note { display: flex; align-items: center; gap: 6px; }
 @media (max-width: 520px) {
   .sh-fs .fs-when { grid-template-columns: minmax(0, 1fr); }
-  .sh-fs .fs-time-field { max-width: 160px; }
+  .sh-fs .fs-time-field { max-width: 180px; }
   .sh-fs .fs-pv-macros { margin-left: 0; }
 }
 
