@@ -35,6 +35,7 @@ const COL_GAP = 14;
 const MAX_ALERTS = 3;
 const MAX_TASKS = 7;
 const MAX_DONE_TASKS = 3;
+const MAX_REMINDERS = 4;
 const STALE_CONFLICT_MS = 90 * 60e3;   // расхождение по уже прошедшему событию не показываем
 const RELEVANT = new Set(['events', 'tasks', 'meals', 'water', 'weight', 'habits', 'habitLogs', 'sources', 'changes', 'snapshots', 'settings']);
 
@@ -79,13 +80,15 @@ const occKey = o => (o.external ? o.id : o.key);
 
 /**
  * Текущие и следующее вхождение. occs — отсортированные вхождения (вчера…+неделя).
- * → { current: Occ[], next: Occ|null, allDay: Occ[] (весь день сегодня) }
+ * → { current: Occ[], next: Occ|null, later: Occ[] (до 3 после next), allDay: Occ[] (весь день сегодня) }
  */
 function pickNowNext(occs, nowMs, todayStr) {
   const timed = occs.filter(o => !o.allDay);
+  const upcoming = timed.filter(o => o.startMs > nowMs);
   return {
     current: timed.filter(o => o.startMs <= nowMs && o.endMs > nowMs),
-    next: timed.find(o => o.startMs > nowMs) || null,
+    next: upcoming[0] || null,
+    later: upcoming.slice(1, 4),
     allDay: occs.filter(o => o.allDay && o.occDate === todayStr),
   };
 }
@@ -167,6 +170,25 @@ function weightInfo(weights, todayStr) {
   return { last, base, delta, days: base ? diffDays(base.date, last.date) : 0, points };
 }
 
+/**
+ * Ближайшие напоминания для карточки: сначала настоящие (события, задачи, привычки…),
+ * дайджесты — только чтобы добрать до limit (не больше одного утреннего и одного вечернего).
+ * Порядок — по времени.
+ */
+function pickReminders(list, limit) {
+  const main = list.filter(r => r.kind !== 'digest').slice(0, limit);
+  const digests = [];
+  const seenKinds = new Set();
+  for (const r of list) {
+    if (r.kind !== 'digest') continue;
+    const which = /:m$/.test(r.key) ? 'm' : /:e$/.test(r.key) ? 'e' : r.key;
+    if (seenKinds.has(which)) continue;
+    seenKinds.add(which);
+    digests.push(r);
+  }
+  return sortBy([...main, ...digests.slice(0, Math.max(0, limit - main.length))], r => r.at);
+}
+
 /** Раскладка «кирпичиками»: каждая карточка — в самую короткую колонку. → индексы колонок. */
 function assignColumns(heights, n, gap = COL_GAP) {
   const sums = new Array(Math.max(1, n)).fill(0);
@@ -181,7 +203,7 @@ function assignColumns(heights, n, gap = COL_GAP) {
 /** Число колонок по ширине области. */
 const colsForWidth = w => (w >= 900 ? 3 : w >= 600 ? 2 : 1);
 
-export const __test = { greeting, studyWeek, cleanLabel, pickNowNext, buildTimeline, pickTasks, collectAlerts, weightInfo, assignColumns, colsForWidth };
+export const __test = { greeting, studyWeek, cleanLabel, pickNowNext, buildTimeline, pickTasks, collectAlerts, weightInfo, pickReminders, assignColumns, colsForWidth };
 
 // ---------------------------------------------------------------------------
 // Состояние вида
@@ -411,15 +433,17 @@ function heroCard(ctx) {
   } catch (err) {
     console.error('[today] agendaRange', err);
   }
-  const { current, next, allDay } = pickNowNext(occs, ctx.now, ctx.t);
+  const { current, next, later, allDay } = pickNowNext(occs, ctx.now, ctx.t);
   if (!current.length && !next && !allDay.length) return '';
-  for (const o of [...current, ...allDay, next]) if (o) refs.occ.set(occKey(o), o);
+  for (const o of [...current, ...allDay, ...later, next]) if (o) refs.occ.set(occKey(o), o);
 
   const live = current[0];
   const blocks = [];
   if (live) blocks.push(liveBlock(live, ctx, current.length - 1));
   if (next) blocks.push(nextBlock(next, ctx));
-  else if (live) {
+  // Без текущего события справа (на широком экране) — что будет потом.
+  if (!live && next && later.length) blocks.push(laterBlock(later, ctx));
+  else if (!next && live) {
     blocks.push(html`<div class="td-blk td-free">
       <div class="td-blk-label">Далее</div>
       <div class="td-free-text">Дальше на неделе событий нет — свободное время</div>
@@ -464,6 +488,19 @@ function nextBlock(o, ctx) {
   </div>`;
 }
 
+function laterBlock(list, ctx) {
+  return html`<div class="td-blk td-later">
+    <div class="td-blk-label">Потом</div>
+    <div class="td-later-list">
+      ${list.map(o => html`<button type="button" class="td-later-row type-${o.type || 'other'}"${tcStyle(o)} data-act="occ" data-key="${occKey(o)}">
+        <span class="td-later-time num">${o.occDate === ctx.t ? '' : html`<small>${fmtDayLabel(o.occDate, ctx.t).toLowerCase()}</small>`}${msToHm(o.startMs)}</span>
+        <span class="dot"></span>
+        <span class="td-later-title">${o.title}</span>
+      </button>`)}
+    </div>
+  </div>`;
+}
+
 function sourceName(id) {
   return store.get('sources', id)?.name || 'сайт';
 }
@@ -493,7 +530,7 @@ function timelineCard(ctx) {
   const count = agenda.length;
   const addBtn = html`<button type="button" class="icon-btn sm td-add" data-act="add-event" aria-label="Добавить событие" title="Добавить событие">${icon('plus', 18)}</button>`;
   return html`<section class="card td-card td-plan">
-    ${cardHead('План на сегодня', 'calendar', { href: '#/schedule', linkLabel: 'Неделя', extra: addBtn, badge: count ? html`<span class="badge">${count}</span>` : '' })}
+    ${cardHead('План дня', 'calendar', { href: '#/schedule', linkLabel: 'Неделя', extra: addBtn, badge: count ? html`<span class="badge">${count}</span>` : '' })}
     ${rows.length ? html`<div class="timeline">${rows.map(r => timelineRow(r, ctx, flagged))}</div>`
       : empty({ icon: 'calendar', title: 'Сегодня свободно', text: 'Ни пар, ни встреч. Добавь событие — или просто отдохни.', action: { label: 'Добавить событие', act: 'add-event', icon: 'plus' } })}
   </section>`;
@@ -655,7 +692,7 @@ function badItem(it, logs, ctx) {
       <span class="item-icon td-emoji" aria-hidden="true">${h.emoji || '🚫'}</span>
       <div class="item-main">
         <span class="item-title">${h.name || 'Привычка'}</span>
-        <span class="item-sub td-hsub"><span class="td-clean">${icon('clock', 13)}без срывов <b class="num">${cleanLabel(ct)}</b></span>${sv.money > 0 ? html`<span class="td-saved">${icon('wallet', 13)}${fmtMoney(sv.money)}</span>` : ''}</span>
+        <span class="item-sub td-hsub"><span class="td-clean">${icon('clock', 13)}<span>без срывов <b class="num">${cleanLabel(ct)}</b></span></span>${sv.money > 0 ? html`<span class="td-saved">${icon('wallet', 13)}${fmtMoney(sv.money)}</span>` : ''}</span>
       </div>
       <div class="item-side">
         <button type="button" class="btn sm td-crave" data-act="habit-crave" data-id="${h.id}" title="Хотелось, но удержался — это победа">Хочется</button>
@@ -715,7 +752,7 @@ function foodCard(ctx) {
       ${ring({ value: tot.water, max: wGoal, size: 58, stroke: 6, color: 'var(--info)', label: fmtNum(tot.water / 1000, 2), sub: 'л' })}
       <div class="td-water-main">
         <div class="td-water-title">Вода</div>
-        <div class="td-water-sub"><span class="num">${fmtNum(tot.water)}${wGoal ? ` из ${fmtNum(wGoal)}` : ''} мл</span>${pace.behind >= 250 ? html`<span class="text-warn"> · отстаёшь на ${fmtNum(pace.behind)}</span>` : wGoal && tot.water >= wGoal ? html`<span class="text-ok"> · норма есть</span>` : ''}</div>
+        <div class="td-water-sub"><span class="num">${fmtNum(tot.water)}${wGoal ? ` из ${fmtNum(wGoal)}` : ''} мл</span>${pace.behind >= 250 ? html`<span class="text-warn"> · отстаёшь на ${fmtNum(Math.round(pace.behind / 50) * 50)}</span>` : wGoal && tot.water >= wGoal ? html`<span class="text-ok"> · норма есть</span>` : ''}</div>
       </div>
       <div class="td-water-btns">
         <button type="button" class="btn sm" data-act="water" data-ml="250" aria-label="Добавить 250 мл воды">+250</button>
@@ -750,7 +787,7 @@ function notifyCard(ctx) {
     </section>`;
   }
   let list = [];
-  try { list = notify.upcoming(4) || []; } catch { list = []; }
+  try { list = pickReminders(notify.upcoming(24) || [], MAX_REMINDERS); } catch { list = []; }
   return html`<section class="card td-card td-notify">
     ${head}
     ${list.length ? html`<div class="list td-rems">${list.map(r => remItem(r, ctx))}</div>`
@@ -761,12 +798,15 @@ function notifyCard(ctx) {
 function remItem(r, ctx) {
   const day = msToYmd(r.at);
   const href = typeof r.url === 'string' && r.url.startsWith('./#/') ? r.url.slice(2) : '#/today';
-  const dayLabel = day === ctx.t ? '' : fmtDayLabel(day, ctx.t).toLowerCase();
-  return html`<a class="item td-rem" href="${href}">
+  const n = diffDays(ctx.t, day);
+  const dayLabel = n === 0 ? '' : n === 1 ? 'завтра' : fmtDate(day, { short: true, year: false });
+  // Дайджест — одной строкой (его текст длинный и меняется в течение дня).
+  const body = r.kind === 'digest' ? 'сводка дня' : r.body;
+  return html`<a class="item td-rem ${r.kind === 'digest' ? 'digest' : ''}" href="${href}">
     <span class="td-rem-time"><span class="num">${msToHm(r.at)}</span>${dayLabel ? html`<small>${dayLabel}</small>` : ''}</span>
     <span class="item-main">
       <span class="item-title">${r.title}</span>
-      ${r.body ? html`<span class="item-sub td-rem-body">${r.body}</span>` : ''}
+      ${body ? html`<span class="item-sub td-rem-body">${body}</span>` : ''}
     </span>
   </a>`;
 }
@@ -838,7 +878,7 @@ function welcomeCard(ctx) {
     m.habits && { act: 'habit-add', icon: 'flame', label: 'Добавить привычку', sub: 'полезную или вредную' },
     m.food && { act: 'food-add', icon: 'utensils', label: 'Записать еду', sub: 'КБЖУ посчитаю сам' },
     m.schedule && { act: 'source-add', icon: 'globe', label: 'Сайт с расписанием', sub: 'подтяну пары и замечу замены' },
-    { act: 'demo', icon: 'sparkles', label: 'Загрузить демо-данные', sub: 'посмотреть, как всё работает', cls: 'demo' },
+    { act: 'demo', icon: 'sparkles', label: 'Загрузить демо', sub: 'посмотреть, как всё работает', cls: 'demo' },
   ].filter(Boolean);
   return html`<section class="card td-welcome" aria-label="Начало работы">
     <div class="td-welcome-head">
