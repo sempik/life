@@ -202,6 +202,18 @@ test('parseSource json: root arrays, numeric/bracket paths, default fields, uid 
   assert.throws(() => parseSource({ kind: 'json', path: 'a.__proto__' }, '{"a":{}}', { now: NOW }), /нет списка/);
   assert.throws(() => parseSource({ kind: 'json' }, '<html>', { now: NOW }), /не является корректным JSON/);
   assert.throws(() => parseSource({ kind: 'rss' }, '', { now: NOW }), /Неизвестный тип источника/);
+  // компактные форматы: 'YYYYMMDDTHHMMSSZ', число YYYYMMDD («весь день»); нулевая длительность — не на завтра
+  const compact = JSON.stringify([
+    { title: 'B', start: '20261106T100000Z', end: '20261106T113000Z' },
+    { title: 'C', start: 20261107 },
+    { title: 'D', date: '2026-11-08', start: '10:00', end: '10:00' },
+  ]);
+  const s3 = parseSource({ kind: 'json', fields: { date: 'date' } }, compact, { now: NOW });
+  assert.deepEqual(s3.items.map(i => [i.title, i.start, i.end, i.allDay]), [
+    ['B', U(2026, 11, 6, 10), U(2026, 11, 6, 11, 30), false],
+    ['C', L(2026, 11, 7), null, true],
+    ['D', L(2026, 11, 8, 10), L(2026, 11, 8, 10), false],
+  ]);
   // XSSI-префикс и BOM
   const s2 = parseSource({ kind: 'json', path: 'a' }, `\uFEFF)]}'\n{"a":[{"title":"t","start":"2026-11-06 10:00"}]}`, { now: NOW });
   assert.equal(s2.items.length, 1);

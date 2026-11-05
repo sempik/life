@@ -45,7 +45,6 @@ function dayParts(n) {
 const dowOf = n => ((((n % 7) + 7) % 7) + 3) % 7 + 1;
 const dimOf = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
 const compactDay = n => { const p = dayParts(n); return `${p.y}${pad(p.m)}${pad(p.d)}`; };
-const ymdToDay = s => dayNum(+s.slice(0, 4), +s.slice(5, 7), +s.slice(8, 10));
 const uniqSorted = arr => [...new Set(arr)].sort((a, b) => a - b);
 
 // ---------------------------------------------------------------- часовые пояса

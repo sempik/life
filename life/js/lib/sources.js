@@ -260,6 +260,12 @@ const validYmd = (y, m, d) => m >= 1 && m <= 12 && d >= 1 && d <= new Date(y, m,
  */
 function parseWhen(v, baseYmd) {
   if (v == null || v === '' || typeof v === 'boolean') return null;
+  // 'YYYYMMDD' / 'YYYYMMDDTHHMM[SS][Z]' (в т. ч. числом 20261105)
+  const compact = /^\s*((?:19|20)\d{2})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?\s*$/i.exec(String(v));
+  if (compact && validYmd(+compact[1], +compact[2], +compact[3])) {
+    const [, y, mo, d, H, Mi, S, z] = compact;
+    v = `${y}-${mo}-${d}` + (H != null ? `T${H}:${Mi}:${S || '00'}${z || ''}` : '');
+  }
   if (typeof v === 'number' || (typeof v === 'string' && /^\s*-?\d{9,13}(\.\d+)?\s*$/.test(v))) {
     const n = Number(v);
     if (!Number.isFinite(n)) return null;
@@ -309,7 +315,7 @@ function jsonRange(raw, f) {
   const en = f.end ? parseWhen(getPath(raw, f.end), st.ymd) : null;
   if (en) {
     end = en.allDay ? toMs(addDays(en.ymd, 1)) : en.ms;
-    if (en.timeOnly && end <= st.ms && !st.allDay) {
+    if (en.timeOnly && end < st.ms && !st.allDay) {
       const t = String(getPath(raw, f.end)).trim();
       end = parseWhen(t, addDays(st.ymd, 1)).ms;
     }

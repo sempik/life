@@ -62,6 +62,7 @@ let preferRemoteSettings = false; // первое слияние после по
 let persistedLastSync = 0;
 let firstSyncDone = false;
 let lastAttemptAt = 0;
+let isReady = false;
 let started = false;
 let inflight = null;
 let queued = null;
@@ -82,6 +83,7 @@ const ready = (async () => {
   credsSig = sigOf(creds());
   persistedLastSync = Number(l.lastSync) || 0;
   Object.assign(st, baseState());
+  isReady = true;
   emit();
 })();
 
@@ -388,8 +390,8 @@ export async function changePassphrase(newPassphrase) {
   await ready;
   const next = String(newPassphrase ?? '');
   if (!isConfigured()) {
+    credsSig = sigOf({ ...creds(), passphrase: next });
     await store.setLocal({ passphrase: next });
-    credsSig = sigOf(creds());
     emit();
     return status();
   }
@@ -660,7 +662,8 @@ let changePending = false;
 store.on(({ colls, origin }) => {
   const dataChanged = [...colls].some(c => c !== 'local');
   if (dataChanged) storeVersion++;
-  if (colls.has('local')) {
+  // До готовности (и на событии загрузки) отпечаток ещё не снят — это не смена учётных данных.
+  if (isReady && origin !== 'load' && colls.has('local')) {
     const sig = sigOf(creds());
     if (sig !== credsSig) {
       // Токен/gist/пароль поменяли напрямую через store.setLocal — начинаем заново.
