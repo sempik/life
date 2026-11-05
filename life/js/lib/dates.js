@@ -234,18 +234,26 @@ export function inHmRange(hmStr, from, to) {
  * Перевод «настенного» времени в указанной IANA-зоне в UTC-мс.
  * Нужен парсеру ICS для TZID=... (браузер и Node, через Intl).
  */
+const zoneFmtCache = new Map(); // timeZone → Intl.DateTimeFormat | null (неизвестная зона)
+function zoneFmt(timeZone) {
+  if (!zoneFmtCache.has(timeZone)) {
+    let fmt = null;
+    try {
+      fmt = new Intl.DateTimeFormat('en-US', {
+        timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+      });
+    } catch { /* неизвестная зона */ }
+    zoneFmtCache.set(timeZone, fmt);
+  }
+  return zoneFmtCache.get(timeZone);
+}
+
 export function zonedToMs(y, mo, d, h = 0, mi = 0, s = 0, timeZone = 'UTC') {
   const guess = Date.UTC(y, mo - 1, d, h, mi, s);
   if (!timeZone || timeZone === 'UTC' || timeZone === 'Etc/UTC') return guess;
-  let fmt;
-  try {
-    fmt = new Intl.DateTimeFormat('en-US', {
-      timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-    });
-  } catch {
-    return new Date(y, mo - 1, d, h, mi, s).getTime(); // неизвестная зона → локальное время
-  }
+  const fmt = zoneFmt(timeZone);
+  if (!fmt) return new Date(y, mo - 1, d, h, mi, s).getTime(); // неизвестная зона → локальное время
   const offsetAt = ms => {
     const p = Object.fromEntries(fmt.formatToParts(new Date(ms)).map(x => [x.type, x.value]));
     const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
