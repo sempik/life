@@ -71,11 +71,16 @@ export function debounce(fn, ms) {
 
 export const isObj = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 
-/** Глубокое слияние простых объектов (массивы заменяются целиком). Не мутирует аргументы. */
+/**
+ * Глубокое слияние простых объектов (массивы заменяются целиком). Не мутирует аргументы.
+ * Ключ '__proto__' (бывает в JSON.parse из чужих/повреждённых файлов) пропускается:
+ * присваивание out['__proto__'] подменило бы прототип результата.
+ */
 export function deepMerge(base, patch) {
   if (!isObj(base) || !isObj(patch)) return patch === undefined ? base : patch;
   const out = { ...base };
   for (const [k, v] of Object.entries(patch)) {
+    if (k === '__proto__') continue;
     out[k] = isObj(v) && isObj(base[k]) ? deepMerge(base[k], v) : v;
   }
   return out;

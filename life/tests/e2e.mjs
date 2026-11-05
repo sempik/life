@@ -2,9 +2,11 @@
 // Life — дымовой e2e-тест на Playwright (Chromium).
 //
 //   node life/tests/e2e.mjs [--shots DIR] [--only mobile|desktop] [--routes today,food]
-//                           [--no-demo] [--no-offline] [--headed] [--verbose]
+//                           [--tz Europe/Moscow] [--root DIR] [--no-demo] [--no-offline]
+//                           [--headed] [--verbose]
 //
 // Что делает:
+//   0. статически: каждый файл life/js/** и life/css/** есть в списке SHELL в sw.js (иначе офлайн сломается);
 //   1. поднимает статический сервер (чистый node:http) над корнем сайта sempik.github.io;
 //   2. открывает /life/ в двух контекстах: телефон (390×844, touch) и ПК (1280×800),
 //      с разрешением на уведомления;
@@ -89,22 +91,28 @@ const STUB_HOSTS = new Set(['fonts.googleapis.com', 'fonts.gstatic.com']);
  */
 export const CHECKS = [
   { name: 'quick-add', phase: 'fresh', run: checkQuickAdd },
+  { name: 'more-sheet', phase: 'fresh', viewports: ['mobile'], run: checkMoreSheet },
   { name: 'reminders-demo', phase: 'fresh', run: checkRemindersSanity },
   { name: 'sync-off', phase: 'fresh', run: checkSyncOff },
   { name: 'manifest', phase: 'fresh', viewports: ['desktop'], run: checkManifest },
+  { name: 'sources-ics', phase: 'demo', run: checkSourcesPipeline },
+  { name: 'theme-light', phase: 'final', run: checkLightTheme },
 ];
 
 // ---------------------------------------------------------------------------
 // Статический сервер
 
 /**
- * Статический сервер над root. → { url, port, close(), down, notFound: string[] }
+ * Статический сервер над root. → { url, port, close(), down, notFound: string[], vars, handlers }
  * down = true — сервер рвёт соединения (имитация пропавшей сети).
+ * handlers — { '/путь': (req, server) => ({ status?, type, body }) }: динамические ответы
+ * (например, «сайт с расписанием» для проверки источников); vars — их общее состояние.
  */
-export async function startServer(root = SITE_ROOT, { port = 0, host = '127.0.0.1' } = {}) {
+export async function startServer(root = SITE_ROOT, { port = 0, host = '127.0.0.1', handlers = {} } = {}) {
   const rootAbs = path.resolve(root);
   const state = { down: false, notFound: [], requests: 0 };
   const sockets = new Set();
+  let api = null;
   const server = http.createServer((req, res) => {
     state.requests++;
     if (state.down) { req.socket.destroy(); return; }
@@ -119,6 +127,15 @@ export async function startServer(root = SITE_ROOT, { port = 0, host = '127.0.0.
     } catch {
       res.writeHead(400);
       res.end();
+      return;
+    }
+    const dyn = api.handlers[pathname];
+    if (typeof dyn === 'function') {
+      let out;
+      try { out = dyn(req, api) || {}; } catch (err) { out = { status: 500, type: 'text/plain; charset=utf-8', body: String(err?.stack || err) }; }
+      const body = Buffer.from(out.body ?? '');
+      res.writeHead(out.status || 200, { 'Content-Type': out.type || 'text/plain; charset=utf-8', 'Content-Length': body.length, 'Cache-Control': 'no-store' });
+      res.end(req.method === 'HEAD' ? undefined : body);
       return;
     }
     let file = path.resolve(rootAbs, `.${pathname}`);
@@ -158,7 +175,9 @@ export async function startServer(root = SITE_ROOT, { port = 0, host = '127.0.0.
     server.listen(port, host, resolve);
   });
   const actualPort = server.address().port;
-  return {
+  api = {
+    handlers: { ...handlers },
+    vars: {},
     port: actualPort,
     url: `http://${host}:${actualPort}`,
     get down() { return state.down; },
@@ -173,6 +192,42 @@ export async function startServer(root = SITE_ROOT, { port = 0, host = '127.0.0.
       server.close(() => resolve());
     }),
   };
+  return api;
+}
+
+// ---------------------------------------------------------------------------
+// «Сайт с расписанием» для проверки источников: ICS относительно сегодняшнего дня.
+
+/** Сегодня в зоне timeZone → 'YYYY-MM-DD'. */
+function todayIn(timeZone) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+}
+
+function shiftYmd(ymdStr, n) {
+  const [y, m, d] = ymdStr.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+/**
+ * ICS: пары пн–пт 10:40–12:10 (с понедельника этой недели) и разовая консультация завтра.
+ * variant 2 — консультация перенесена (другое время и аудитория): источник должен увидеть изменение.
+ */
+export function e2eIcs(timeZone = 'Europe/Moscow', variant = 1) {
+  const t = todayIn(timeZone);
+  const dow = (new Date(`${t}T12:00:00Z`).getUTCDay() + 6) % 7; // 0 = пн
+  const monday = shiftYmd(t, -dow).replace(/-/g, '');
+  const tomorrow = shiftYmd(t, 1).replace(/-/g, '');
+  const [start, end, room] = variant === 2 ? ['160000', '173000', 'ауд. 410'] : ['140000', '153000', 'ауд. 210'];
+  return [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//life-e2e//RU', 'X-WR-CALNAME:E2E расписание',
+    'BEGIN:VEVENT', 'UID:e2e-weekly@life', 'DTSTAMP:20260101T000000Z',
+    `DTSTART;TZID=${timeZone}:${monday}T104000`, `DTEND;TZID=${timeZone}:${monday}T121000`,
+    'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR', 'SUMMARY:Матанализ (e2e)', 'LOCATION:ауд. 305', 'END:VEVENT',
+    'BEGIN:VEVENT', 'UID:e2e-once@life', 'DTSTAMP:20260101T000000Z',
+    `DTSTART;TZID=${timeZone}:${tomorrow}T${start}`, `DTEND;TZID=${timeZone}:${tomorrow}T${end}`,
+    'SUMMARY:Консультация (e2e)', `LOCATION:${room}`, 'END:VEVENT',
+    'END:VCALENDAR', '',
+  ].join('\r\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -198,19 +253,52 @@ export async function loadPlaywright() {
 // Запуск
 
 /**
+ * Файлы приложения, которых нет в списке SHELL в sw.js (их не будет офлайн после первой загрузки).
+ * → { missing: string[], stale: string[] } (stale — в списке есть, а файла нет)
+ */
+export function checkShellList(root = SITE_ROOT) {
+  const appDir = path.join(root, APP_PATH);
+  const sw = fs.readFileSync(path.join(appDir, 'sw.js'), 'utf8');
+  const m = /const SHELL = \[([\s\S]*?)\];/.exec(sw);
+  if (!m) return { missing: ['(в sw.js не найден массив SHELL)'], stale: [] };
+  const listed = new Set([...m[1].matchAll(/'([^']+)'/g)].map(x => path.posix.normalize(x[1].replace(/^\.\//, ''))));
+  const onDisk = [];
+  const walk = (rel) => {
+    for (const e of fs.readdirSync(path.join(appDir, rel), { withFileTypes: true })) {
+      const r = path.posix.join(rel, e.name);
+      if (e.isDirectory()) walk(r);
+      else if (/\.(js|css)$/.test(e.name)) onDisk.push(r);
+    }
+  };
+  for (const dir of ['js', 'css']) if (fs.existsSync(path.join(appDir, dir))) walk(dir);
+  const missing = onDisk.filter(f => !listed.has(f));
+  const stale = [...listed].filter(f => f !== '.' && !fs.existsSync(path.join(appDir, f)));
+  return { missing, stale };
+}
+
+/**
  * Прогнать дымовой тест.
  * → { errors: [{ vp, phase, kind, message }], notes: string[], shots: string[] }
  */
 export async function run({
   shots = '', only = '', routes = null, demo = true, offline = true, headed = false, verbose = false,
-  checks = CHECKS, root = SITE_ROOT, timeoutMs = 180e3,
+  checks = CHECKS, root = SITE_ROOT, timeoutMs = 180e3, timezoneId = 'Europe/Moscow',
 } = {}) {
-  const { chromium } = await loadPlaywright();
-  const server = await startServer(root);
-  const appUrl = `${server.url}${APP_PATH}`;
   const errors = [];
   const notes = [];
   const shotFiles = [];
+
+  const shell = checkShellList(root);
+  for (const f of shell.missing) errors.push({ vp: '-', phase: 'static', kind: 'sw', message: `файла ${f} нет в SHELL (sw.js) — не будет доступен офлайн` });
+  for (const f of shell.stale) errors.push({ vp: '-', phase: 'static', kind: 'sw', message: `в SHELL (sw.js) указан несуществующий файл ${f}` });
+
+  const { chromium } = await loadPlaywright();
+  const server = await startServer(root, {
+    handlers: {
+      '/__e2e/schedule.ics': (req, srv) => ({ type: MIME['.ics'], body: e2eIcs(timezoneId, srv.vars.icsVariant || 1) }),
+    },
+  });
+  const appUrl = `${server.url}${APP_PATH}`;
   if (shots) fs.mkdirSync(shots, { recursive: true });
 
   const routeList = routes ? ROUTES.filter(r => routes.includes(r.id)) : ROUTES;
@@ -226,7 +314,7 @@ export async function run({
   try {
     for (const vp of vpNames) {
       console.log(`▶ ${vp}`);
-      const h = await openContext({ browser, server, appUrl, vp, errors, notes, shots, shotFiles, log });
+      const h = await openContext({ browser, server, appUrl, vp, errors, notes, shots, shotFiles, log, timezoneId });
       try {
         await scenario(h, { routeList, demo, offline, checks });
       } catch (err) {
@@ -262,10 +350,11 @@ export async function run({
  *   h.closeSheets(), h.clearToasts(), h.loadDemo()
  *   h.externalRequests — запросы к чужим сайтам (url), h.offline — идёт офлайн-фаза
  */
-async function openContext({ browser, server, appUrl, vp, errors, notes, shots, shotFiles, log }) {
+async function openContext({ browser, server, appUrl, vp, errors, notes, shots, shotFiles, log, timezoneId }) {
   const context = await browser.newContext({
     ...VIEWPORTS[vp],
     locale: 'ru-RU',
+    timezoneId,
     reducedMotion: 'reduce',
     serviceWorkers: 'allow',
   });
@@ -499,6 +588,77 @@ async function checkQuickAdd(h) {
   h.note(`быстрое добавление: ${n} кнопок`);
 }
 
+async function checkMoreSheet(h) {
+  await h.goto('today');
+  await h.page.locator('[data-more]:visible').first().click();
+  await h.page.waitForSelector('.sheet-layer.open .more-list', { timeout: 5e3 });
+  const items = await h.page.locator('.sheet-layer.open .more-list a.item').count();
+  if (items !== 3) h.error('more', `в «Ещё» ${items} пунктов вместо 3`);
+  await h.shot('more');
+  await h.page.locator('.sheet-layer.open .more-list a[href="#/stats"]').click();
+  await h.page.waitForFunction(() => document.querySelector('#view .view-root')?.dataset.page === 'stats' && !document.querySelector('.sheet-layer'), null, { timeout: 5e3 })
+    .catch(() => h.error('more', 'пункт «Статистика» не открыл раздел или шторка не закрылась'));
+}
+
+async function checkLightTheme(h) {
+  await h.goto('today');
+  const bg = async () => h.evaluate(() => ({
+    theme: document.documentElement.dataset.theme,
+    bg: getComputedStyle(document.body).backgroundColor,
+  }));
+  const setTheme = t => h.evaluate(async theme => {
+    const { store } = await import('./js/core/store.js');
+    store.setSettings({ theme });
+  }, t);
+  const dark = await bg();
+  await setTheme('light');
+  await h.settle(300);
+  const light = await bg();
+  if (light.theme !== 'light') h.error('theme', `data-theme = ${light.theme}, ожидалось light`);
+  const lum = c => { const m = /(\d+),\s*(\d+),\s*(\d+)/.exec(c); return m ? (+m[1] + +m[2] + +m[3]) / 3 : NaN; };
+  if (!(lum(light.bg) > 180)) h.error('theme', `светлая тема: фон ${light.bg}`);
+  if (!(lum(dark.bg) < 60)) h.error('theme', `тёмная тема: фон ${dark.bg}`);
+  await h.shot('light-today');
+  await setTheme('dark');
+  await h.settle(200);
+}
+
+/** Источник ICS с «сайта» (тот же сервер): загрузка → снимок → повестка → изменение после переноса пары. */
+async function checkSourcesPipeline(h) {
+  h.server.vars.icsVariant = 1;
+  const url = `${h.server.url}/__e2e/schedule.ics`;
+  const first = await h.evaluate(async src => {
+    const [{ store }, sync, { agendaRange }, { today, addDays }] = await Promise.all([
+      import('./js/core/store.js'), import('./js/core/sync.js'), import('./js/lib/recur.js'), import('./js/lib/dates.js'),
+    ]);
+    store.put('sources', { id: 'e2e_ics', name: 'E2E расписание', kind: 'ics', url: src, enabled: true, eventType: 'class', color: null, notify: true, remind: false });
+    const res = await sync.refreshSources({ only: 'e2e_ics' });
+    const snap = store.snapshot('e2e_ics');
+    const t = today();
+    const ext = agendaRange(store.reminderState(), t, addDays(t, 7)).filter(o => o.external && o.sourceId === 'e2e_ics');
+    return { res, ok: snap?.ok, error: snap?.error, items: snap?.items?.length || 0, ext: ext.length, titles: [...new Set(ext.map(o => o.title))] };
+  }, url);
+  if (first.res.errors?.length) h.error('sources', `ошибка загрузки: ${JSON.stringify(first.res.errors)}`);
+  if (!first.ok) h.error('sources', `снимок не ok: ${first.error}`);
+  if (!first.items) h.error('sources', 'в снимке нет вхождений');
+  if (!first.ext) h.error('sources', 'вхождения источника не попали в повестку (agendaRange)');
+  if (!first.titles.includes('Консультация (e2e)')) h.error('sources', `нет разового события в повестке: ${first.titles.join(', ')}`);
+
+  h.server.vars.icsVariant = 2; // «сайт» перенёс консультацию
+  const second = await h.evaluate(async () => {
+    const [{ store }, sync] = await Promise.all([import('./js/core/store.js'), import('./js/core/sync.js')]);
+    const res = await sync.refreshSources({ only: 'e2e_ics' });
+    const changes = store.all('changes').filter(c => c.sourceId === 'e2e_ics');
+    return { res, changes: changes.map(c => ({ kind: c.kind, title: c.title, details: c.details })) };
+  });
+  if (second.res.errors?.length) h.error('sources', `повторная загрузка: ${JSON.stringify(second.res.errors)}`);
+  if (!second.changes.some(c => c.kind === 'changed' && /Консультация/.test(c.title))) {
+    h.error('sources', `перенос события не попал в «Изменения»: ${JSON.stringify(second.changes)}`);
+  }
+  h.note(`источник ICS: ${first.items} вхождений в снимке, ${first.ext} в повестке на неделю; изменений: ${second.changes.length}`);
+  for (const c of second.changes) h.note(`  ${c.kind}: ${c.title} — ${c.details}`);
+}
+
 async function checkRemindersSanity(h) {
   const r = await h.evaluate(async () => {
     const [{ computeReminders, formatReminder }, { demoData }, { store }, { today }] = await Promise.all([
@@ -637,6 +797,8 @@ function parseArgs(argv) {
     if (a === '--shots') o.shots = path.resolve(next() || path.join(os.tmpdir(), 'life-e2e-shots'));
     else if (a.startsWith('--shots=')) o.shots = path.resolve(a.slice(8));
     else if (a === '--only') o.only = next();
+    else if (a === '--tz') o.timezoneId = next();
+    else if (a === '--root') o.root = path.resolve(next());
     else if (a === '--routes') o.routes = String(next() || '').split(',').filter(Boolean);
     else if (a === '--no-demo') o.demo = false;
     else if (a === '--no-offline') o.offline = false;
@@ -651,12 +813,12 @@ function parseArgs(argv) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   if (opts.help) {
-    console.log('node life/tests/e2e.mjs [--shots DIR] [--only mobile|desktop] [--routes a,b] [--no-demo] [--no-offline] [--headed] [--verbose]');
+    console.log('node life/tests/e2e.mjs [--shots DIR] [--only mobile|desktop] [--routes a,b] [--tz IANA] [--root DIR] [--no-demo] [--no-offline] [--headed] [--verbose]');
     return 0;
   }
   const t0 = Date.now();
   const { errors, notes, shots } = await run(opts);
-  for (const n of notes) console.log(`  • ${n}`);
+  if (!opts.verbose) for (const n of notes) console.log(`  • ${n}`);
   if (shots.length) console.log(`Скриншоты (${shots.length}): ${opts.shots}`);
   const secs = ((Date.now() - t0) / 1000).toFixed(1);
   if (errors.length) {

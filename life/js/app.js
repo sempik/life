@@ -4,27 +4,44 @@ import { store } from './core/store.js';
 import * as router from './core/router.js';
 import { html, icon, openSheet, toast, hasOpenSheet } from './core/ui.js';
 
-import today from './pages/today.js';
-import schedule from './pages/schedule.js';
-import tasks from './pages/tasks.js';
-import food from './pages/food.js';
-import habits from './pages/habits.js';
-import stats from './pages/stats.js';
-import sources from './pages/sources.js';
-import settings from './pages/settings.js';
-
 const THEME_COLORS = { dark: '#000000', light: '#f4f4f1' };
+
+/**
+ * Страницы грузятся по отдельности (параллельно с чтением IndexedDB): ошибка в одном
+ * разделе не должна ронять всё приложение — вместо него показывается заглушка с ошибкой.
+ * meta — запасные заголовок/иконка для заглушки и навигации.
+ */
+const PAGES = [
+  { id: 'today', title: 'Сегодня', icon: 'home', nav: true },
+  { id: 'schedule', title: 'Расписание', icon: 'calendar', nav: true },
+  { id: 'tasks', title: 'Задачи', icon: 'check-square', nav: true },
+  { id: 'food', title: 'Питание', icon: 'utensils', nav: true },
+  { id: 'habits', title: 'Привычки', icon: 'flame', nav: true },
+  { id: 'stats', title: 'Статистика', icon: 'chart', nav: false },
+  { id: 'sources', title: 'Источники', icon: 'globe', nav: false },
+  { id: 'settings', title: 'Настройки', icon: 'settings', nav: false },
+];
+
+const pagesLoading = Promise.allSettled(PAGES.map(p => import(`./pages/${p.id}.js`)));
 
 boot().catch(showBootError);
 
 async function boot() {
-  await store.ready;
+  const [, loaded] = await Promise.all([store.ready, pagesLoading]);
 
   applyTheme();
   store.on(({ colls }) => { if (colls.has('settings')) applyTheme(); });
   matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', applyTheme);
 
-  router.init([today, schedule, tasks, food, habits, stats, sources, settings], { onQuickAdd: openQuickAdd });
+  const pages = loaded.map((r, i) => {
+    const page = r.status === 'fulfilled' ? r.value?.default : null;
+    if (page?.id && typeof page.render === 'function') return page;
+    const reason = r.status === 'rejected' ? r.reason : new Error('модуль не экспортирует страницу (export default { id, render })');
+    console.error(`[app] раздел "${PAGES[i].id}" не загрузился`, reason);
+    return brokenPage(PAGES[i], reason);
+  });
+
+  router.init(pages, { onQuickAdd: openQuickAdd });
   window.__lifeBooted = true;
 
   // notify.js и sync.js — необязательные: их ошибка не должна ронять приложение.
@@ -48,6 +65,23 @@ async function boot() {
       console.error('[app] онбординг', err);
     }
   }
+}
+
+/** Заглушка раздела, модуль которого не загрузился (ошибка в коде или файл не скачался). */
+function brokenPage(meta, err) {
+  return {
+    ...meta,
+    render(root) {
+      root.innerHTML = html`<section class="page">
+        <div class="page-head"><h1>${meta.title}</h1></div>
+        <div class="alert bad" data-render-error>${icon('alert', 20)}<div>
+          <b>Раздел не загрузился.</b>
+          <div class="small">${String(err?.message || err || 'Неизвестная ошибка')}</div>
+        </div></div>
+        <div class="row"><button type="button" class="btn" onclick="location.reload()">${icon('refresh', 18)}Перезагрузить</button></div>
+      </section>`;
+    },
+  };
 }
 
 function optional(path, fn) {
