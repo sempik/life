@@ -166,6 +166,19 @@ export function unitGen(unit, n) {
   return a % 10 === 1 && a % 100 !== 11 ? forms[1] : forms[2];
 }
 
+/** Винительный после «за»: «банка» → «банку», «порция» → «порцию»; «шт», «стакан» — как есть. */
+export function unitAcc(unit) {
+  const u = String(unit ?? '').trim();
+  if (/[а-яё]{2,}а$/i.test(u)) return u.slice(0, -1) + 'у';
+  if (/[а-яё]{2,}я$/i.test(u)) return u.slice(0, -1) + 'ю';
+  return u;
+}
+
+/** Длительность для текста: «3 дня 13 ч», «40 мин». */
+export function cleanSpan(ct) {
+  return fmtDuration((ct?.days || 0) * 1440 + (ct?.hours || 0) * 60 + (ct?.minutes || 0));
+}
+
 /** «не больше 1 банки», «не больше 3 раз». */
 export function limitText(limit, unit) {
   return `не больше ${num(limit)} ${unitGen(unit || 'раз', limit)}`.trim();
@@ -220,6 +233,7 @@ export function describeDays(days) {
   const key = set.join(',');
   if (key === WEEKDAYS.join(',')) return 'по будням';
   if (key === WEEKEND.join(',')) return 'по выходным';
+  if (set.length === 6) return `кроме ${DOW_SHORT[ALL_DAYS.find(d => !set.includes(d)) - 1]}`;
   return set.map(d => DOW_SHORT[d - 1]).join(', ');
 }
 
@@ -1010,7 +1024,7 @@ function openSlipSheet(habitId) {
     className: 'sh-hb sh-habit-slip',
     body: html`<div class="hb-slip">
       <p class="hb-slip-lead">Срыв — не провал, а часть пути: почти никто не бросает с первой попытки. Отметь, что случилось, — так проще заметить, что тебя подталкивает.</p>
-      ${kept ? html`<div class="alert ok">${icon('trophy', 18)}<div>Ты продержался <b>${cleanText(ct, { minutes: false })}</b>${best > ct.days ? html`, а рекорд — ${pluralN(best, DAY_FORMS)}` : ''}. Это никуда не денется. Счётчик начнётся заново — и ты снова справишься.</div></div>` : ''}
+      ${kept ? html`<div class="alert ok">${icon('trophy', 18)}<div>Ты продержался <b>${cleanSpan(ct)}</b>${best > ct.days ? html`, а рекорд — ${pluralN(best, DAY_FORMS)}` : ''}. Это никуда не денется. Счётчик начнётся заново — и ты снова справишься.</div></div>` : ''}
       <div class="hb-slip-grid">
         <div class="field">
           <div class="field-label">Сколько</div>
@@ -1155,7 +1169,7 @@ function onDetailClick(e, d) {
 }
 
 function detailFooter(h) {
-  return html`<button type="button" class="btn danger" data-act="d-delete">${icon('trash', 18)}<span>Удалить</span></button>
+  return html`<button type="button" class="btn danger hb-d-del" data-act="d-delete" aria-label="Удалить привычку">${icon('trash', 18)}<span>Удалить</span></button>
     <button type="button" class="btn ghost" data-act="d-archive">${icon(h.archived ? 'refresh' : 'inbox', 18)}<span>${h.archived ? 'Вернуть' : 'В архив'}</span></button>
     <span class="spacer"></span>
     <button type="button" class="btn primary" data-act="d-edit">${icon('edit', 18)}<span>Изменить</span></button>`;
@@ -1192,7 +1206,7 @@ function detailBody(h, shown = LOGS_PAGE) {
     const sk = streak(h, logs, t, now);
     const sv = savings(h, logs, now);
     desc = `Вредная · бросаю с ${fmtDate(start)}`;
-    sub = [Number(h.baseline) > 0 && `было ${fmtQty(h.baseline, unit)} в день`, Number(h.costPerUnit) > 0 && `${fmtMoney(h.costPerUnit)} за ${unitWord(unit, 1)}`, isHm(h.reminder) && `спрошу в ${h.reminder}`].filter(Boolean).join(' · ');
+    sub = [Number(h.baseline) > 0 && `было ${fmtQty(h.baseline, unit)} в день`, Number(h.costPerUnit) > 0 && `${fmtMoney(h.costPerUnit)} за ${unitAcc(unit)}`, isHm(h.reminder) && `спрошу в ${h.reminder}`].filter(Boolean).join(' · ');
     kpis = [
       kpi(cleanParts(ct, { minutes: false }).map(([n, u], i) => html`${i ? ' ' : ''}${kv(n, u)}`), 'без срывов', 'ok'),
       kpi(kv(sk.best, plural(sk.best, ['день', 'дня', 'дней'])), 'рекорд'),
@@ -1443,7 +1457,7 @@ export function openHabitForm(habit = null, defaults = {}) {
   return handle;
 }
 
-const costLabel = fv => `Цена за ${unitWord(String(fv.unit || '').trim() || 'шт', 1)}`;
+const costLabel = fv => `Цена за ${unitAcc(String(fv.unit || '').trim() || 'шт')}`;
 
 function calcHtml(fv) {
   const b = parseNum(fv.baseline), c = parseNum(fv.costPerUnit);
@@ -1526,11 +1540,12 @@ function formInner(fv, formId, editing) {
       ${inputHtml(id('cost'), 'costPerUnit', fv.costPerUnit, { mode: 'decimal', ph: '0', unit: '₽' })}
       ${e.costPerUnit ? html`<div class="field-error" role="alert">${e.costPerUnit}</div>` : ''}
     </div>`);
-    parts.push(html`<div class="field full hb-f-calc-wrap"><div class="hb-f-calc">${calcHtml(fv)}</div></div>`);
-    parts.push(fieldWrap('since', quit ? 'Бросаю с' : 'Считаю с', inputHtml(id('since'), 'since', fv.since, { type: 'date', max: todayYmd() }), {
-      err: e.since, id: id('since'), full: true,
-      hint: quit ? 'Отсчёт — с начала этого дня. Если сегодня уже был срыв, отметь его — таймер пойдёт от него.' : '',
-    }));
+    const since = fieldWrap('since', quit ? 'Бросаю с' : 'Считаю с', inputHtml(id('since'), 'since', fv.since, { type: 'date', max: todayYmd() }), {
+      err: e.since, id: id('since'), full: !quit,
+    });
+    if (quit) parts.push(since);
+    parts.push(html`<div class="field full hb-f-calc-wrap"><div class="hb-f-calc">${calcHtml(fv)}</div>${quit ? html`<div class="field-hint hb-f-since-hint">Отсчёт идёт с начала выбранного дня. Если сегодня уже был срыв — отметь его, и таймер пойдёт от него.</div>` : ''}</div>`);
+    if (!quit) parts.push(since);
   }
 
   parts.push(fieldWrap('color', 'Цвет', html`<div class="swatches" role="group" aria-label="Цвет">
@@ -1626,7 +1641,7 @@ function quickItem(h, ctx) {
     }
   } else if (isQuit(h)) {
     cls = 'quit';
-    sub = `без срывов ${cleanText(cleanTime(h, logs, ctx.now), { minutes: false })}`;
+    sub = `без срывов ${cleanSpan(cleanTime(h, logs, ctx.now))}`;
     acts = html`<button type="button" class="btn sm" data-act="q-crave" data-id="${h.id}">Хочется 😤</button><button type="button" class="btn sm ghost" data-act="q-slip" data-id="${h.id}">Сорвался</button>`;
   } else {
     const ls = limitStatus(h, logs, ctx.t);
@@ -1696,7 +1711,7 @@ export default {
 export const __test = {
   tick: () => tick(),
   clockActive: () => !!(clock.timeout || clock.interval),
-  unitWord, unitGen, limitText, fmtQty, untilLabel, cleanParts, cleanText, milestoneInfo, describeDays, savedLabel, startOf, totals,
+  unitWord, unitGen, unitAcc, cleanSpan, limitText, fmtQty, untilLabel, cleanParts, cleanText, milestoneInfo, describeDays, savedLabel, startOf, totals,
   weekStates, limitHistory, limitLevel, slipNote, pickTip, parseNum, heatmapMonths, formInit, applyTemplate,
   buildRecord, TIPS, TEMPLATES, TRIGGERS,
 };

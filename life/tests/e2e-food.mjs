@@ -685,6 +685,18 @@ async function checkDateNav(h) {
     expect(h, (await hash(h)).includes(`date=${d3}`), `Enter на столбике: ${await hash(h)}`);
   }
 
+  // Кнопка даты открывает нативный выбор (без исключений).
+  await h.page.locator('.p-food [data-act="pick-date"]').click({ force: true });
+  await h.settle(100);
+  await h.page.keyboard.press('Escape');
+
+  // Ярлык приложения «#/food?add=1» при холодном старте.
+  await h.evaluate(() => { history.replaceState(null, '', `${location.pathname}#/food?add=1`); }); // без hashchange
+  await h.boot({ reload: true });
+  await waitSheet(h, 'sh-fs', 8e3).catch(() => h.error('food', 'ярлык #/food?add=1 не открыл поиск при запуске'));
+  expect(h, !(await hash(h)).includes('add='), `после запуска параметр add остался: ${await hash(h)}`);
+  await h.closeSheets();
+
   // ?add=1 открывает поиск и убирает параметр.
   await h.goto('food', { add: 1, meal: 'dinner' });
   await waitSheet(h, 'sh-fs');

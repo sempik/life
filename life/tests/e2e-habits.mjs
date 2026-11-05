@@ -370,7 +370,7 @@ async function checkSlip(h) {
   await waitSheet(h, 'sh-habit-slip');
   const sh = topSheet(h);
   const alert = (await sh.locator('.alert').textContent().catch(() => '')).replace(/\s+/g, ' ');
-  expect(h, /продержался 3 д/.test(alert), `поддержка: «${alert}»`);
+  expect(h, /продержался 3 дня/.test(alert), `поддержка: «${alert}»`);
   expect(h, (await sh.locator('.hb-trig .chip').count()) === 6, 'не 6 триггеров');
   await sh.locator('[data-act="cnt"][data-d="1"]').click();
   await sh.locator('.hb-trig [data-v="стресс"]').click();

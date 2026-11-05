@@ -305,6 +305,11 @@
 .sh-habit .hb-d-sec { display: flex; flex-direction: column; gap: 10px; }
 .sh-habit .hb-d-sec-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .sh-habit .hb-d-sec-h h3 { font-size: 15px; }
+.sh-habit .hb-f-since-hint, .sh-habit-form .hb-f-since-hint { margin-top: 8px; }
+@media (max-width: 479.98px) {
+  .sh-habit .sheet-foot .hb-d-del { width: 46px; padding: 0; }
+  .sh-habit .sheet-foot .hb-d-del span { display: none; }
+}
 .sh-habit .hb-d-empty { padding: 18px; border: 1px dashed var(--line-2); border-radius: 14px; text-align: center; color: var(--muted); font-size: 14px; }
 
 /* Тепловая карта: подписи дней в той же сетке, ячейки тянутся по ширине */
@@ -452,7 +457,7 @@
 .sh-habit-quick .hb-q-cheer-ico { font-size: 20px; line-height: 1.2; }
 .sh-habit-quick .hb-q-cheer b { color: var(--ok); }
 .sh-habit-quick .hb-q-cheer-tip { margin-top: 3px; color: var(--text-2); font-size: 13.5px; line-height: 1.45; }
-.sh-habit-quick .hb-q-cheer-acts { display: flex; align-items: center; gap: 2px; margin: -6px -6px -6px auto; }
+.sh-habit-quick .hb-q-cheer > .hb-q-cheer-acts { flex: 1 0 100%; display: flex; justify-content: flex-end; align-items: center; gap: 2px; margin: -4px -6px -6px 0; }
 .sh-habit-quick .hb-q-title { margin-bottom: 2px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .sh-habit-quick .hb-q-item {
   display: grid;
