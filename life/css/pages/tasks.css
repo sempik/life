@@ -1,1 +1,370 @@
-/* Стили страницы «tasks». Все селекторы — внутри .p-tasks */
+/* Стили страницы «tasks». Все селекторы — внутри .p-tasks (форма — .sh-tasks). */
+
+/* --- шапка --------------------------------------------------------------- */
+.p-tasks .page-head { align-items: flex-start; flex-wrap: nowrap; }
+.p-tasks .tk-head-main { min-width: 0; flex: 1 1 auto; }
+.p-tasks .tk-sub { min-height: 20px; }
+.p-tasks .page-head .actions { flex-wrap: nowrap; padding-top: 2px; }
+.p-tasks .tk-search-btn { width: 40px; height: 40px; color: var(--text-2); }
+.p-tasks .tk-search-btn.on { background: var(--text); color: var(--on-text); border-color: transparent; }
+.p-tasks .tk-new-btn { height: 40px; }
+
+/* --- раскладка ------------------------------------------------------------ */
+.p-tasks .tk-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+.p-tasks .tk-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.p-tasks .tk-aside { display: none; }
+@media (min-width: 1180px) {
+  .p-tasks .tk-layout { grid-template-columns: minmax(0, 1fr) 288px; gap: 24px; }
+  .p-tasks .tk-aside { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 24px; }
+}
+
+/* --- быстрый ввод ---------------------------------------------------------- */
+.p-tasks .tk-add { display: flex; flex-direction: column; gap: 8px; }
+.p-tasks .tk-add-box {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 58px;
+  padding: 7px 7px 7px 16px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.p-tasks .tk-add-box:hover { border-color: var(--muted); }
+.p-tasks .tk-add-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.p-tasks .tk-add-dot {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-right: 8px;
+  border-radius: 50%;
+  border: 2px dashed var(--line-2);
+  transition: border-color 0.15s;
+}
+.p-tasks .tk-add-box:focus-within .tk-add-dot { border-color: var(--accent); }
+.p-tasks .tk-add-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.p-tasks .tk-add-input:focus-visible { outline: none; }
+.p-tasks .tk-add-input::placeholder { color: var(--muted); opacity: 0.9; }
+.p-tasks .tk-add-more { width: 40px; height: 40px; color: var(--muted); }
+.p-tasks .tk-add-more:hover { color: var(--text); }
+.p-tasks .tk-add-go {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 13px;
+  background: var(--text);
+  color: var(--on-text);
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s, background 0.15s;
+}
+.p-tasks .tk-add-go:hover { background: var(--text-2); }
+.p-tasks .tk-add-go:active { transform: scale(0.94); }
+.p-tasks .tk-add-go:disabled { opacity: 0.22; cursor: default; transform: none; }
+
+.p-tasks .tk-hints { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0 4px; }
+.p-tasks .tk-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  animation: tk-hint-in 0.2s var(--ease) both;
+}
+.p-tasks .tk-hint .ico { width: 14px; height: 14px; }
+.p-tasks .tk-hint b { font-weight: 800; letter-spacing: -0.04em; }
+.p-tasks .tk-hint.soft { background: var(--surface-2); color: var(--text-2); }
+.p-tasks .tk-hint.bad { background: var(--bad-soft); color: var(--bad); }
+.p-tasks .tk-hint.p1 { background: var(--warn-soft); color: var(--warn); }
+.p-tasks .tk-hint.p2 { background: var(--bad-soft); color: var(--bad); }
+.p-tasks .tk-hint.tag { background: var(--surface-3); color: var(--text); }
+.p-tasks .tk-hint-note { font-size: 13px; color: var(--muted); padding: 4px 2px; }
+.p-tasks .tk-hint-note.warn { color: var(--warn); }
+@keyframes tk-hint-in { from { opacity: 0; transform: translateY(-3px) scale(0.96); } }
+
+.p-tasks .tk-shake { animation: tk-shake 0.36s ease both; border-color: var(--warn); }
+@keyframes tk-shake {
+  20% { transform: translateX(-6px); }
+  45% { transform: translateX(5px); }
+  70% { transform: translateX(-3px); }
+  90% { transform: translateX(1px); }
+}
+
+/* --- фильтры, поиск, теги -------------------------------------------------- */
+.p-tasks .tk-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.p-tasks .tk-seg { display: flex; width: 100%; align-self: stretch; }
+.p-tasks .tk-seg > button { height: 36px; padding: 0 10px; gap: 5px; }
+.p-tasks .tk-seg-n {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--text-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.p-tasks .tk-seg > .on .tk-seg-n { background: var(--text); color: var(--on-text); }
+.p-tasks .tk-seg-n.bad, .p-tasks .tk-seg > .on .tk-seg-n.bad { background: var(--bad-soft); color: var(--bad); }
+
+.p-tasks .tk-search { display: none; position: relative; flex: 1 1 100%; min-width: 0; }
+.p-tasks.search-open .tk-search { display: block; }
+.p-tasks .tk-search .input { height: 42px; font-size: 16px; padding-right: 44px; border-radius: var(--radius-sm); }
+.p-tasks .tk-search input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+.p-tasks .tk-search-clear { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.p-tasks .tk-search-clear:active { transform: translateY(-50%) scale(0.94); }
+
+.p-tasks .tk-tags { gap: 6px; }
+.p-tasks .tk-tag-chip { height: 36px; gap: 5px; padding: 0 12px; font-size: 13.5px; }
+.p-tasks .tk-tag-chip .ico { width: 14px; height: 14px; margin-right: -3px; }
+.p-tasks .tk-chip-n { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.p-tasks .tk-tag-chip.on .tk-chip-n { color: inherit; opacity: 0.6; }
+
+@media (min-width: 600px) {
+  .p-tasks .tk-seg { width: auto; align-self: flex-start; }
+  .p-tasks .tk-seg > button { padding: 0 14px; }
+}
+@media (min-width: 900px) {
+  .p-tasks .tk-search-btn { display: none; }
+  .p-tasks .tk-search { display: block; flex: 0 1 280px; margin-left: auto; }
+  .p-tasks .tk-search .input { height: 40px; }
+  .p-tasks .tk-tags { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
+  .p-tasks .tk-tag-chip { height: 32px; }
+}
+
+/* --- группы и задачи -------------------------------------------------------- */
+.p-tasks .tk-body { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.p-tasks .tk-group { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.p-tasks .tk-gh { display: flex; align-items: center; gap: 8px; min-height: 26px; padding: 0 4px; }
+.p-tasks .tk-gt {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.p-tasks .tk-overdue .tk-gt { color: var(--bad); }
+.p-tasks .tk-gc {
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.p-tasks .tk-overdue .tk-gc { background: var(--bad-soft); color: var(--bad); }
+
+.p-tasks .tk-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.p-tasks .tk-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 58px;
+  padding: 15px 8px 14px 16px;
+  min-width: 0;
+  transition: background 0.15s, opacity 0.28s ease, transform 0.3s var(--ease);
+}
+.p-tasks .tk-item + .tk-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 56px;
+  right: 0;
+  border-top: 1px solid var(--line);
+}
+@media (hover: hover) {
+  .p-tasks .tk-item:hover { background: var(--surface-2); }
+  .p-tasks .tk-item:hover .tk-del, .p-tasks .tk-del:focus-visible { opacity: 1; }
+}
+@media (hover: none) {
+  .p-tasks .tk-del { display: none; }
+}
+
+.p-tasks .tk-item .check { width: 26px; height: 26px; margin-top: -2px; }
+.p-tasks .tk-item .check::after { width: 6px; height: 10px; }
+.p-tasks .tk-item .check::before { content: ""; position: absolute; inset: -9px; border-radius: 50%; }
+.p-tasks .tk-item.is-done .check.on { background: var(--surface-3); border-color: var(--surface-3); color: var(--text-2); }
+.p-tasks .tk-completing .check.on { background: var(--ok); border-color: var(--ok); color: #04140a; }
+.p-tasks .check.tk-pop { animation: tk-pop 0.42s var(--ease) both, tk-ring 0.65s ease-out both; }
+@keyframes tk-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.22); }
+  70% { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+@keyframes tk-ring {
+  0% { box-shadow: 0 0 0 0 var(--ok-soft), 0 0 0 0 var(--ok); }
+  60% { box-shadow: 0 0 0 10px var(--ok-soft), 0 0 0 1px transparent; }
+  100% { box-shadow: 0 0 0 16px transparent, 0 0 0 1px transparent; }
+}
+.p-tasks .tk-leaving { opacity: 0; transform: translateX(16px); }
+.p-tasks .tk-flash { animation: tk-flash 1.6s ease-out; }
+@keyframes tk-flash { 0%, 30% { background: var(--accent-soft); } 100% { background: transparent; } }
+
+.p-tasks .tk-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  border-radius: 6px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.p-tasks .tk-main:focus-visible { outline-offset: 4px; }
+.p-tasks .tk-title { font-size: 15.5px; font-weight: 500; line-height: 1.35; overflow-wrap: anywhere; color: var(--text); }
+.p-tasks .tk-title-t {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0 1.5px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  transition: background-size 0.35s var(--ease), color 0.3s;
+}
+.p-tasks .is-done .tk-title-t, .p-tasks .tk-completing .tk-title-t { background-size: 100% 1.5px; color: var(--muted); }
+.p-tasks .tk-note { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-tasks .tk-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+  font-size: 12.5px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.p-tasks .tk-due { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); font-weight: 500; font-variant-numeric: tabular-nums; }
+.p-tasks .tk-due .ico { width: 13px; height: 13px; color: var(--muted); }
+.p-tasks .tk-due.bad, .p-tasks .tk-due.bad .ico { color: var(--bad); }
+.p-tasks .is-done .tk-due { color: var(--muted); font-weight: 400; }
+.p-tasks .tk-pri { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+.p-tasks .tk-pri::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.p-tasks .tk-pri.p1 { color: var(--warn); }
+.p-tasks .tk-pri.p2 { color: var(--bad); }
+.p-tasks .tk-ic { display: inline-flex; align-items: center; gap: 3px; }
+.p-tasks .tk-ic .ico { width: 13px; height: 13px; }
+.p-tasks .tk-ev {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-width: 0;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  background: color-mix(in srgb, var(--tc, var(--accent)) 15%, transparent);
+  color: var(--tc, var(--accent));
+  font-weight: 500;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.p-tasks .tk-ev:hover { filter: brightness(1.15); }
+.p-tasks .tk-ev .ico { width: 13px; height: 13px; flex: none; }
+.p-tasks .tk-ev-t { min-width: 0; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p-tasks .tk-tag { color: var(--accent); font-weight: 500; }
+.p-tasks .is-done .tk-tag, .p-tasks .is-done .tk-ev { opacity: 0.7; }
+.p-tasks .tk-del { flex: none; margin: -6px 0 -6px -4px; color: var(--muted); opacity: 0; transition: opacity 0.15s, background 0.15s, color 0.15s; }
+.p-tasks .tk-del:hover { color: var(--bad); background: var(--bad-soft); }
+
+/* «Готово» */
+.p-tasks .tk-gh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  margin: -7px -8px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.p-tasks .tk-gh-btn:hover { background: var(--surface-2); }
+.p-tasks .tk-gh-btn .ico { color: var(--muted); transition: transform 0.22s var(--ease); }
+.p-tasks .tk-done.open .tk-gh-btn .ico { transform: rotate(180deg); }
+.p-tasks .tk-done .tk-list { animation: tk-open 0.22s var(--ease) both; }
+@keyframes tk-open { from { opacity: 0; transform: translateY(-4px); } }
+.p-tasks .tk-done-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.p-tasks .tk-done-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; padding: 0 4px; }
+.p-tasks .tk-done-day .tk-gt { text-transform: none; letter-spacing: 0; font-size: 14px; color: var(--text-2); }
+.p-tasks .tk-more { color: var(--muted); }
+.p-tasks .tk-body > .empty { padding: 40px 20px; }
+
+/* --- боковая колонка (широкий ПК) ----------------------------------------- */
+.p-tasks .tk-summary .card-head, .p-tasks .tk-help .card-head { margin-bottom: 10px; }
+.p-tasks .tk-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.p-tasks .tk-kpis .kpi-value { font-size: 24px; }
+.p-tasks .tk-kpis .kpi-label { font-size: 12px; line-height: 1.25; }
+.p-tasks .tk-progress { display: flex; flex-direction: column; gap: 7px; margin-top: 16px; }
+.p-tasks .tk-progress .progress > span { background: var(--ok); }
+.p-tasks .tk-help-rows { display: flex; flex-direction: column; gap: 9px; }
+.p-tasks .tk-help-rows > div { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.p-tasks .tk-help-rows .muted { margin-left: 3px; }
+.p-tasks .tk-kbd {
+  display: inline-flex;
+  align-items: center;
+  height: 23px;
+  padding: 0 7px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.p-tasks .tk-examples { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; }
+.p-tasks .tk-example {
+  padding: 8px 11px;
+  border: 1px dashed var(--line-2);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.p-tasks .tk-example:hover { background: var(--surface-2); color: var(--text); border-color: var(--muted); }
+
+/* --- форма задачи ------------------------------------------------------------ */
+.sh-tasks .field[data-name="priority"] .chip.on[data-idx="1"] { background: var(--warn); color: #1a1200; }
+.sh-tasks .field[data-name="priority"] .chip.on[data-idx="2"] { background: var(--bad); color: #fff; }
