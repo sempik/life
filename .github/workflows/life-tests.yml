@@ -1,0 +1,28 @@
+name: life-tests
+
+on:
+  push:
+    paths: ['life/**', '.github/scripts/**', '.github/workflows/life-*.yml']
+  pull_request:
+    paths: ['life/**', '.github/scripts/**', '.github/workflows/life-*.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        tz: [Europe/Moscow, America/New_York, Asia/Vladivostok]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Unit tests (${{ matrix.tz }})
+        env:
+          TZ: ${{ matrix.tz }}
+        run: node --test life/tests/*.test.mjs .github/scripts/*.test.mjs
