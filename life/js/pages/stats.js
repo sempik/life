@@ -6,7 +6,7 @@ export default {
   title: 'Статистика',
   icon: 'chart',
   nav: false,
-  render(root) {
+  render(root) { throw new Error('boom-test');
     root.innerHTML = html`<section class="page">
       <div class="page-head"><h1>Статистика</h1></div>
       ${empty({ icon: 'chart', title: 'Раздел в разработке', text: 'Графики и итоги за неделю, месяц и год.' })}

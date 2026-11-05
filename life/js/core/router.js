@@ -362,7 +362,7 @@ function renderPage(cur) {
     console.error(`[router] ошибка отрисовки "${page.id}"`, err);
     root.innerHTML = String(html`<section class="page">
       <div class="page-head"><h1>${page.title || 'Ошибка'}</h1></div>
-      <div class="alert bad">${icon('alert', 20)}<div><b>Не удалось показать раздел.</b><div class="small">${String(err?.message || err)}</div></div></div>
+      <div class="alert bad" data-render-error>${icon('alert', 20)}<div><b>Не удалось показать раздел.</b><div class="small">${String(err?.message || err)}</div></div></div>
     </section>`);
   }
   document.title = page.title ? `${page.title} · Life` : 'Life';

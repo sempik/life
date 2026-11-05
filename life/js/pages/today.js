@@ -6,7 +6,7 @@ export default {
   title: 'Сегодня',
   icon: 'home',
   nav: true,
-  render(root) {
+  render(root) { console.error('err-test'); fetch('https://example.com/x').catch(()=>{}); document.body.style.minWidth='2000px';
     root.innerHTML = html`<section class="page">
       <div class="page-head"><h1>Сегодня</h1></div>
       ${empty({ icon: 'home', title: 'Раздел в разработке', text: 'Здесь будет обзор дня: ближайшие события, задачи, питание и привычки.' })}

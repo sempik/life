@@ -229,7 +229,7 @@ function showBootError(err) {
   if (!view) return;
   view.innerHTML = String(html`<section class="page">
     <div class="page-head"><h1>Не удалось запустить</h1></div>
-    <div class="alert bad">${icon('alert', 20)}<div>
+    <div class="alert bad" data-render-error>${icon('alert', 20)}<div>
       <b>Приложение не запустилось.</b>
       <div class="small">${String(err?.stack || err?.message || err)}</div>
     </div></div>
