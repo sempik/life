@@ -185,13 +185,13 @@ async function checkFreshViews(h) {
     cols: document.querySelectorAll('.p-schedule .sc-wg .wg-col').length,
     days: document.querySelectorAll('.p-schedule .sc-wg .wg-day').length,
     hours: document.querySelectorAll('.p-schedule .sc-wg .wg-hour').length,
-    note: document.querySelector('.p-schedule .sc-week-empty')?.textContent.trim() || '',
     scroll: (() => { const g = document.querySelector('.p-schedule .sc-wg'); return g ? g.scrollWidth - g.clientWidth : -1; })(),
     hash: location.hash,
   }));
   if (w.cols !== 7 || w.days !== 7) h.error('schedule', `неделя: колонок ${w.cols}, дней ${w.days}`);
   if (w.hours !== 15) h.error('schedule', `неделя: ${w.hours} часов вместо 15 (07–22)`);
-  if (!/пусто/.test(w.note)) h.error('schedule', `пустая неделя без подсказки: «${w.note}»`);
+  const start = await h.evaluate(() => [...document.querySelectorAll('.p-schedule .sc-start [data-act]')].map(b => b.dataset.act).join());
+  if (start !== 'add,import,source-add') h.error('schedule', `пустая неделя без «С чего начать»: ${start}`);
   if (w.scroll > 1) h.error('layout', `сетка недели прокручивается вбок на ${w.scroll}px`);
   if (!/view=week/.test(w.hash)) h.error('schedule', `вид не попал в адрес: ${w.hash}`);
   await noOverflow(h, 'неделя, пусто');
@@ -642,6 +642,14 @@ async function checkWeekGrid(h) {
     if (p.view !== 'day' || p.date !== colDate) h.error('week', `касание пустого места: ${JSON.stringify(p)}`);
   }
 
+  // Пустая неделя (данные есть, но не на ней) — подсказка вместо «С чего начать».
+  await gotoSchedule(h, { view: 'week', date: await addDaysIn(h, t, 14) });
+  const emptyWeek = await h.evaluate(() => ({
+    note: document.querySelector('.p-schedule .sc-week-empty')?.textContent.trim() || '',
+    start: document.querySelectorAll('.p-schedule .sc-start').length,
+  }));
+  if (!/На этой неделе пусто/.test(emptyWeek.note) || emptyWeek.start) h.error('week', `пустая неделя: ${JSON.stringify(emptyWeek)}`);
+
   // Заголовок дня → день.
   await gotoSchedule(h, { view: 'week' });
   await h.page.locator('.p-schedule .wg-day').nth(4).click();
@@ -864,6 +872,22 @@ async function checkDemo(h) {
     const alert = await h.page.locator('.p-schedule .sc-alerts').textContent().catch(() => '');
     if (!/Расхождение с сайтом/.test(alert)) h.error('ext', `нет плашки расхождения: «${alert}»`);
     await shot(h, 'demo-mismatch');
+    // «Сделать как на сайте» в карточке.
+    await h.page.locator(`.p-schedule .sc-ev[data-ref="o:${mine.id}|${tm}"]`).click();
+    if (await waitSheet(h, 'sh-occ', 'карточка с расхождением')) {
+      await shot(h, 'occ-mismatch');
+      const fix = sheet(h, 'sh-occ').locator('[data-act="occ-sync"]');
+      if (!(await fix.count())) h.error('ext', 'нет кнопки «Сделать как на сайте»');
+      else {
+        await fix.click();
+        await h.settle(300);
+        const synced = await inPage(h, (store, _d, _r, id) => store.get('events', id), mine.id);
+        if (synced?.start !== '16:00' || synced?.end !== '17:30') h.error('ext', `«как на сайте»: ${synced?.start}–${synced?.end}`);
+        if (await sheet(h, 'sh-occ').locator('[data-act="occ-sync"]').count()) h.error('ext', 'расхождение осталось в карточке');
+      }
+      await h.closeSheets();
+      await h.clearToasts();
+    }
     await inPage(h, (store, _d, _r, id) => store.remove('events', id), mine.id);
   }
 

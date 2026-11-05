@@ -20,7 +20,7 @@ import {
   startOfMonth, endOfMonth, rangeDays, toMs, msToYmd, msToHm, weekIndex, fmtDate, fmtDayLabel,
   fmtDuration, fmtRelative, pluralN, MONTHS, MONTHS_GEN, MONTHS_SHORT, DOW_SHORT, DOW_FULL,
 } from '../lib/dates.js';
-import { agendaRange, expandEvents, nextOccurrence, findConflicts, describeRecur } from '../lib/recur.js';
+import { agendaRange, expandEvents, externalOccurrences, nextOccurrence, findConflicts, describeRecur } from '../lib/recur.js';
 import { describeSnapshot } from '../lib/sources.js';
 
 // ---------------------------------------------------------------------------
@@ -524,9 +524,27 @@ function agendaCard(ctx, occs) {
   </section>`;
 }
 
+const isBlank = ctx => !ctx.st.events.length && !ctx.st.sources.length;
+
+/** Совсем пусто (нет ни событий, ни источников): с чего начать — для недели и месяца. */
+function startBanner(ctx) {
+  if (!isBlank(ctx)) return '';
+  return html`<section class="card sc-start">
+    <span class="sc-start-ico">${icon('calendar', 22)}</span>
+    <div class="sc-start-text">
+      <div class="sc-start-title">Расписание пока пустое</div>
+      <div class="sc-start-sub">Добавь пары и встречи, импортируй .ics или подключи сайт — замены я замечу сам.</div>
+    </div>
+    <div class="sc-start-acts">
+      <button type="button" class="btn primary sm" data-act="add">${icon('plus', 16)}<span>Событие</span></button>
+      <button type="button" class="btn sm" data-act="import">${icon('upload', 16)}<span>Импорт .ics</span></button>
+      <button type="button" class="btn sm" data-act="source-add">${icon('globe', 16)}<span>Сайт</span></button>
+    </div>
+  </section>`;
+}
+
 function emptyDay(ctx) {
-  const nothing = !ctx.st.events.length && !ctx.st.sources.length;
-  if (nothing) {
+  if (isBlank(ctx)) {
     return empty({
       icon: 'calendar',
       title: 'Расписание пока пустое',
@@ -708,11 +726,12 @@ function weekView(ctx) {
   const inWeek = occs.filter(o => o.occDate >= from);
 
   return html`<div class="sc-week">
-    ${!inWeek.length ? html`<div class="sc-note sc-week-empty">${icon('sparkles', 16)}<span>На этой неделе пусто.<span class="desktop-only"> Нажми на время в сетке, чтобы добавить событие.</span></span></div>` : ''}
+    ${startBanner(ctx)}
+    ${!inWeek.length && !isBlank(ctx) ? html`<div class="sc-note sc-week-empty">${icon('sparkles', 16)}<span>На этой неделе пусто.<span class="desktop-only"> Нажми на время в сетке, чтобы добавить событие.</span></span></div>` : ''}
     <div class="week-grid sc-wg" style="--hours:${h1 - h0}" data-h0="${h0}" data-h1="${h1}">
       <div class="wg-corner"></div>
       ${days.map((d, i) => html`<button type="button" class="wg-day ${d === t ? 'today' : ''} ${d === date ? 'sel' : ''}" data-act="pick-day" data-date="${d}" aria-label="${cap(DOW_FULL[i])}, ${fmtDate(d)} — открыть день"><span>${DOW_SHORT[i]}</span><b>${Number(d.slice(8))}</b></button>`)}
-      ${anyAll ? html`<div class="wg-corner sc-wg-adl"><span>весь<br>день</span></div>${perDay.map(x => html`<div class="sc-wg-ad">${x.all.map(o => weekAllDay(o, ctx))}</div>`)}` : ''}
+      ${anyAll ? html`<div class="wg-corner sc-wg-adl"><span>весь<br>день</span></div>${perDay.map(x => html`<div class="sc-wg-ad">${x.all.map(o => weekAllDay(o))}</div>`)}` : ''}
       <div class="wg-hours" aria-hidden="true">${hours.map(h => html`<div class="wg-hour">${pad(h)}:00</div>`)}</div>
       ${perDay.map(({ d, segs }, i) => html`<div class="wg-col ${d === t ? 'today' : ''} ${i >= 5 ? 'weekend' : ''}" data-date="${d}">
         ${segs.map(x => weekBlock(x, ctx, h0))}
@@ -723,7 +742,7 @@ function weekView(ctx) {
   </div>`;
 }
 
-function weekAllDay(o, ctx) {
+function weekAllDay(o) {
   refs.set(refOf(o), o);
   return html`<button type="button" class="sc-wg-adev type-${typeOf(o.type)} ${o.external ? 'sc-ext' : ''}" data-act="occ" data-ref="${refOf(o)}" style="${tcStyle(o.color)}" title="${o.title}">${o.title}</button>`;
 }
@@ -784,11 +803,12 @@ function monthView(ctx) {
   }
   const inMonth = occs.filter(o => o.occDate.slice(0, 7) === m0.slice(0, 7));
   return html`<div class="sc-monthwrap">
+    ${startBanner(ctx)}
     <section class="card pad-0 sc-month sc-swipe" data-swipe="month" aria-label="${monthLabel(ctx.date)}">
       <div class="sc-mhead" aria-hidden="true">${DOW_SHORT.map((d, i) => html`<div class="${i >= 5 ? 'we' : ''}">${d}</div>`)}</div>
       <div class="sc-mgrid">${days.map(d => monthCell(d, by.get(d) || [], ctx, m0))}</div>
     </section>
-    ${inMonth.length ? legend(inMonth) : html`<div class="sc-note">${icon('sparkles', 16)}<span>В этом месяце событий нет</span></div>`}
+    ${inMonth.length ? legend(inMonth) : isBlank(ctx) ? '' : html`<div class="sc-note">${icon('sparkles', 16)}<span>В этом месяце событий нет</span></div>`}
   </div>`;
 }
 
@@ -824,6 +844,7 @@ function setupOnce(root) {
       if (!cur?.root?.isConnected || currentRoute().id !== 'schedule') return;
       // «Сейчас» и прошедшие события обновляем, только если на экране сегодняшний день/неделя/месяц.
       const t = today();
+      if (!currentRoute().params.date && cur.date !== t) { rerender(); return; } // наступили новые сутки
       const v = cur.view;
       const range = v === 'month'
         ? [startOfWeek(startOfMonth(cur.date)), endOfWeek(endOfMonth(cur.date))]
@@ -1497,6 +1518,8 @@ export function openOccurrence(occ) {
         } else if (act === 'occ-del') {
           await close();
           deleteEvent({ id: o.eventId }, o.occDate);
+        } else if (act === 'occ-sync') {
+          syncWithSite(o);
         } else if (act === 'occ-copy') {
           copyToMine(o);
           close();
@@ -1556,7 +1579,6 @@ function occBody(o) {
   const s = store.settings;
   const now = Date.now();
   const type = typeOf(o.type);
-  const ev = o.external ? null : store.get('events', o.eventId);
   const src = o.sourceId != null ? store.get('sources', o.sourceId) : null;
   const t = today();
 
@@ -1616,7 +1638,14 @@ function occBody(o) {
       <div class="sc-occ-time">${when}${dur ? html`<span class="muted"> · ${dur}</span>` : ''}</div>
     </div>
     ${link ? html`<a class="btn primary block sc-join" href="${link}" target="_blank" rel="noopener">${icon('external', 18)}<span>Подключиться</span></a>` : ''}
-    ${conflicts.length ? html`<div class="sc-alerts">${conflicts.map(c => html`<div class="alert ${conflictKind(c) === 'missing' ? 'bad' : 'warn'}">${icon('alert', 18)}<div><b>${c.title}</b><div class="small">${c.details}</div></div></div>`)}</div>` : ''}
+    ${conflicts.length ? html`<div class="sc-alerts">${conflicts.map(c => {
+      const k = conflictKind(c);
+      const fix = k === 'mismatch' && siteTwin(o);
+      return html`<div class="alert ${k === 'missing' ? 'bad' : 'warn'}">${icon('alert', 18)}<div>
+        <b>${c.title}</b><div class="small">${c.details}</div>
+        ${fix ? html`<button type="button" class="btn sm sc-sync" data-act="occ-sync">${icon('refresh', 16)}<span>${isRecurring(o) ? 'Это занятие — как на сайте' : 'Сделать как на сайте'}</span></button>` : ''}
+      </div></div>`;
+    })}</div>` : ''}
     <div class="sc-props">
       ${!o.external && isRecurring(o) ? prop('repeat', cap(describeRecur(o.recur, s, o.date)), 'повторение') : ''}
       ${o.location ? prop('map-pin', o.location, type === 'class' ? 'аудитория' : 'место') : ''}
@@ -1646,6 +1675,43 @@ function occBody(o) {
     </div>` : ''}
     ${o.external ? html`<p class="small muted sc-ext-note">Событие с сайта. «Добавить к себе» — появится в твоём расписании, а сверка с сайтом продолжится.</p>` : ''}
   </div>`;
+}
+
+/** Вхождение сайта, с которым связано своё событие (тот же extUid в тот же день), — ближайшее по времени. */
+function siteTwin(o) {
+  if (!o || o.external || o.extUid == null || o.extUid === '') return null;
+  const st = store.reminderState();
+  const list = externalOccurrences(st.snapshots, st.sources, o.occDate, o.occDate)
+    .filter(x => String(x.extUid) === String(o.extUid) && (o.sourceId == null || x.sourceId === o.sourceId));
+  if (!list.length) return null;
+  return list.reduce((a, b) => (Math.abs(b.startMs - o.startMs) < Math.abs(a.startMs - o.startMs) ? b : a));
+}
+
+/** «Сделать как на сайте»: время и место из сайта (у серии — только для этого вхождения). */
+function syncWithSite(o) {
+  const twin = siteTwin(o);
+  const ev = store.get('events', o.eventId);
+  if (!twin || !ev) return;
+  const patch = {
+    allDay: !!twin.allDay,
+    start: twin.allDay ? null : msToHm(twin.startMs),
+    end: twin.allDay ? null : msToHm(twin.endMs),
+    ...(twin.location ? { location: twin.location } : {}),
+  };
+  if (isRecurring(ev)) {
+    const prevRecur = ev.recur;
+    const { id: _i, createdAt: _c, updatedAt: _u, deleted: _d, ...fields } = ev;
+    store.put('events', { id: ev.id, recur: { ...prevRecur, exdates: uniq([...(prevRecur.exdates || []), o.occDate]).sort() } });
+    const one = store.put('events', { ...fields, ...patch, date: o.occDate, recur: null });
+    toast(`${fmtDate(o.occDate, { weekday: true })} — как на сайте`, {
+      action: 'Отменить',
+      onAction: () => { store.remove('events', one.id); store.put('events', { id: ev.id, recur: prevRecur }); },
+    });
+    return;
+  }
+  const prev = { allDay: ev.allDay, start: ev.start, end: ev.end, location: ev.location };
+  store.put('events', { id: ev.id, ...patch });
+  toast('Сделано как на сайте', { action: 'Отменить', onAction: () => store.put('events', { id: ev.id, ...prev }) });
 }
 
 /** «Добавить к себе»: своё разовое событие, привязанное к вхождению сайта (extUid/sourceId). */

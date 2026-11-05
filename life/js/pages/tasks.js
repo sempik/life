@@ -80,8 +80,12 @@ let view = { filter: DEFAULT_FILTER, tag: '', q: '' };
 let doneOpen = false;     // «Готово» развёрнуто (во всех фильтрах, кроме «Готово»)
 let doneLimit = DONE_PAGE;
 let searchOpen = false;   // поле поиска раскрыто на телефоне
-let flashId = null;       // подсветить только что добавленную задачу
+let flash = null;         // { id, at, scrolled } — подсветка только что добавленной задачи
 let searchTimer = null;
+let paintTimer = null;
+let unsubscribe = null;
+const FLASH_MS = 1600;
+const RELEVANT = ['tasks', 'events', 'settings'];
 const timers = new Set();
 
 const later = (fn, ms) => {
@@ -170,7 +174,7 @@ function counts(all, t) {
 // Разметка
 
 function headSub(c, total) {
-  if (!total) return 'Дела со сроками, важностью и напоминаниями';
+  if (!total) return 'Дела, сроки и напоминания';
   if (!c.open) return 'Всё сделано — можно выдохнуть';
   const parts = [];
   if (c.today) parts.push(`${c.today} на сегодня`);
@@ -364,7 +368,7 @@ function bodyHtml(all, c, today) {
 function asideHtml(all, c) {
   const planned = c.todayFilter + c.doneToday;
   const pct = planned ? Math.round((c.doneToday / planned) * 100) : 0;
-  return html`<section class="card tk-summary">
+  return html`${all.length ? html`<section class="card tk-summary">
       <div class="card-head"><div class="card-title">${icon('target', 18)}Сводка</div></div>
       <div class="kpis tk-kpis">
         <div class="kpi"><span class="kpi-value">${c.todayFilter}</span><span class="kpi-label">на сегодня</span></div>
@@ -375,7 +379,7 @@ function asideHtml(all, c) {
         <div class="row between small"><span class="muted">Сегодня выполнено</span><span class="num">${c.doneToday} из ${planned}</span></div>
         <div class="progress thin"><span style="width:${pct}%"></span></div>
       </div>` : ''}
-    </section>
+    </section>` : ''}
     <section class="card tk-help">
       <div class="card-head"><div class="card-title">${icon('sparkles', 18)}Быстрый ввод</div></div>
       <div class="tk-help-rows small">
@@ -458,6 +462,8 @@ function skeletonHtml() {
 function build(el) {
   root = el;
   el.innerHTML = String(skeletonHtml());
+  unsubscribe?.();
+  unsubscribe = store.on(({ colls }) => { if (RELEVANT.some(c => colls.has(c))) schedulePaint(); });
   el.addEventListener('click', onClick);
   el.addEventListener('keydown', onKeydown);
   const form = el.querySelector('.tk-add');
@@ -509,15 +515,29 @@ function paint() {
   $('.tk-aside').innerHTML = String(asideHtml(all, c));
   updateHints();
 
-  if (flashId) {
-    const el = root.querySelector(`.tk-item[data-id="${CSS.escape(flashId)}"]`);
-    flashId = null;
-    if (el) {
+  // Подсветка переживает перерисовки: анимация продолжается с того же места.
+  if (flash) {
+    const age = Date.now() - flash.at;
+    const el = age < FLASH_MS ? root.querySelector(`.tk-item[data-id="${CSS.escape(flash.id)}"]`) : null;
+    if (age >= FLASH_MS) flash = null;
+    else if (el) {
       el.classList.add('tk-flash');
-      const r = el.getBoundingClientRect();
-      if (r.bottom > innerHeight - 80 || r.top < 60) el.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
+      el.style.animationDelay = `-${age}ms`;
+      if (!flash.scrolled) {
+        flash.scrolled = true;
+        const r = el.getBoundingClientRect();
+        if (r.bottom > innerHeight - 80 || r.top < 60) el.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
+      }
     }
   }
+}
+
+const flashTask = id => { flash = { id, at: Date.now(), scrolled: false }; };
+
+/** Изменения данных — перерисовываем списки сами (роутер ждал бы, пока пользователь печатает). */
+function schedulePaint() {
+  clearTimeout(paintTimer);
+  paintTimer = setTimeout(() => { if (root?.isConnected) paint(); }, 50);
 }
 
 function updateHints() {
@@ -566,6 +586,7 @@ function quickAdd() {
     box.classList.remove('tk-shake');
     void box.offsetWidth;
     box.classList.add('tk-shake');
+    later(() => box.classList.remove('tk-shake'), 700);
     updateHints();
     return;
   }
@@ -582,7 +603,7 @@ function quickAdd() {
 /** Новая задача: подсветить, а если её не видно в текущем виде — подсказать, где она. */
 function announceNew(rec) {
   if (root && currentRoute().id === 'tasks' && isVisible(rec)) {
-    flashId = rec.id;
+    flashTask(rec.id);
     return;
   }
   const t = todayYmd();
@@ -592,7 +613,7 @@ function announceNew(rec) {
   toast(onTasks ? `Добавлено в «${where}»` : 'Задача добавлена', {
     action: 'Показать',
     onAction: () => {
-      flashId = rec.id;
+      flashTask(rec.id);
       if (onTasks && root) {
         view = { filter: target, tag: '', q: '' };
         searchOpen = false;
@@ -802,7 +823,8 @@ function remindOptions(cur) {
 export function openTaskForm(task = null, defaults = {}, { onSaved } = {}) {
   const cur = task?.id ? store.get('tasks', task.id) : null;
   const isNew = !cur;
-  const d = defaults && typeof defaults === 'object' ? defaults : {};
+  // Новая: поля берём из defaults (и из task без id, если передали черновик объектом).
+  const d = { ...(isNew && task && typeof task === 'object' ? task : {}), ...(defaults && typeof defaults === 'object' ? defaults : {}) };
   const base = cur || {
     title: d.title || '', notes: d.notes || '',
     due: isYmd(d.due) ? d.due : null, dueTime: isHm(d.dueTime) ? d.dueTime : null,
@@ -895,13 +917,17 @@ export default {
     }
     paint();
   },
-  shouldRerender(colls) {
-    return colls.has('tasks') || colls.has('events') || colls.has('settings');
+  // Данные страница слушает сама (schedulePaint): так поле ввода не мешает обновлению списка.
+  shouldRerender() {
+    return false;
   },
   destroy() {
     for (const t of timers) clearTimeout(t);
     timers.clear();
     clearTimeout(searchTimer);
+    clearTimeout(paintTimer);
+    unsubscribe?.();
+    unsubscribe = null;
     root = null;
   },
 };

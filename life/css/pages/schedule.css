@@ -100,6 +100,31 @@
 }
 .p-schedule .sc-note .ico, .sh-schedule .sc-note .ico { flex: none; }
 
+/* Совсем пусто: с чего начать (неделя, месяц) */
+.p-schedule .sc-start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 14px;
+}
+.p-schedule .sc-start-ico {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+.p-schedule .sc-start-text { flex: 1 1 220px; min-width: 0; }
+.p-schedule .sc-start-title { font-weight: 600; }
+.p-schedule .sc-start-sub { font-size: 13.5px; color: var(--muted); margin-top: 2px; }
+.p-schedule .sc-start-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 899.98px) {
+  .p-schedule .sc-start-acts { width: 100%; }
+  .p-schedule .sc-start-acts .btn { flex: 1 1 auto; height: 40px; }
+}
+
 /* ---------------------------------------------------------------- день */
 
 .p-schedule .sc-day { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
@@ -352,6 +377,7 @@
   background: var(--warn);
   box-shadow: 0 0 0 2px var(--surface-3);
 }
+.p-schedule .wg-ev:has(.sc-flag) .wg-title { padding-right: 8px; }
 .p-schedule .sc-flag.bad { background: var(--bad); }
 .p-schedule .sc-flag.info { background: var(--info); }
 .p-schedule .wg-now { z-index: 2; }
@@ -621,6 +647,8 @@
 .sh-occ .sc-join { height: 48px; }
 .sh-occ .sc-alerts { display: flex; flex-direction: column; gap: 8px; }
 .sh-occ .sc-alerts .small { color: var(--text-2); }
+.sh-occ .sc-sync { margin-top: 10px; }
+@media (max-width: 899.98px) { .sh-occ .sc-sync { height: 40px; } }
 .sh-occ .sc-props { display: flex; flex-direction: column; }
 .sh-occ .sc-prop { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
 .sh-occ .sc-prop-ico {

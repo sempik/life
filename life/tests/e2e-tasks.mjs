@@ -169,6 +169,8 @@ async function checkQuickAdd(h) {
   const warn = await h.page.locator('.p-tasks .tk-hint-note.warn').textContent().catch(() => '');
   expect(h, /Добавь, что нужно сделать/.test(warn || ''), `нет подсказки о пустом названии: «${warn}»`);
   expect(h, await h.page.locator('.p-tasks .tk-add-box.tk-shake').count() === 1, 'поле не «встряхнулось»');
+  await h.page.waitForFunction(() => !document.querySelector('.p-tasks .tk-add-box.tk-shake'), null, { timeout: 3e3 })
+    .catch(() => h.error('tasks', 'класс tk-shake не снят'));
   await h.page.locator('.p-tasks .tk-add-input').press('Escape');
   expect(h, (await h.page.locator('.p-tasks .tk-add-input').inputValue()) === '', 'Escape не очистил поле');
 
