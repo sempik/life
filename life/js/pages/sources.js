@@ -211,6 +211,12 @@ export function fmtEvery(minutes) {
   return `каждые ${fmtDuration(n)}`;
 }
 
+/** 'только что' / '5 мин назад' / 'вчера в 18:30'. */
+export function relAgo(ms, now = Date.now()) {
+  const r = fmtRelative(ms, now);
+  return r === 'сейчас' || ms > now ? 'только что' : r;
+}
+
 const isCancelledItem = it => String(it?.status || '').toUpperCase() === 'CANCELLED';
 const validItem = it => it && Number.isFinite(Number(it.start));
 
@@ -368,6 +374,7 @@ export function planSiteUpdate(ev, occDate, patch) {
 let cur = null;                 // { root, timer, offSync, botSig }
 let syncMod = null;
 const busy = new Set();         // id источников, которые сейчас загружаются
+const lastErrors = new Map();   // id → { at, error } — неудачная попытка «Обновить» из браузера
 let busyAll = false;
 let feedLimit = FEED_PAGE;
 const expanded = new Set();     // раскрытые изменения страниц
@@ -546,7 +553,7 @@ function introCard(open, vm) {
           <span class="src-mode-ico">${icon('refresh', 18)}</span>
           <div class="src-mode-main">
             <div class="src-mode-title">Браузер — по кнопке «Обновить»</div>
-            <div class="src-mode-text">Загружает источник прямо из приложения; пока Life открыт, он и сам заглядывает на сайты ${fmtEvery(s.sourcesEvery)}. Некоторые сайты запрещают загрузку из браузера (CORS) — тогда выручит бот или CORS-прокси.</div>
+            <div class="src-mode-text">Загружает источник прямо из приложения — по кнопке или сам, пока Life открыт. Некоторые сайты это запрещают (CORS) — тогда выручит бот или CORS-прокси.</div>
             <div class="src-mode-meta">CORS-прокси: ${proxy ? html`<b class="src-proxy-val">${hostOf(proxy) || proxy}</b>` : html`<span>не задан</span>`}
               <button type="button" class="src-link-btn" data-act="proxy">${proxy ? 'Изменить' : 'Настроить'}</button></div>
           </div>
@@ -589,7 +596,14 @@ function sourceCard(src, vm) {
   const loading = busy.has(src.id);
   const color = safeColor(src.color);
   const statusCls = !snap ? 'none' : snap.ok ? 'ok' : 'bad';
-  const status = !on ? 'Выключен — не проверяется' : loading ? 'Загружаю…' : describeSnapshot(snap, vm.now);
+  let status;
+  if (!on) status = 'Выключен — не проверяется';
+  else if (loading) status = 'Загружаю…';
+  else if (snap && !snap.ok) status = `Не загрузилось${Number(snap.fetchedAt) > 0 ? ` · ${relAgo(Number(snap.fetchedAt), vm.now)}` : ''}`;
+  else status = describeSnapshot(snap, vm.now);
+  // Удачный снимок есть, но последняя попытка из браузера не удалась (sync оставляет старый снимок).
+  const failed = lastErrors.get(String(src.id));
+  const lateErr = snap?.ok && failed && failed.at > (Number(snap.fetchedAt) || 0) ? failed : null;
   const unseen = vm.changes.filter(c => !c.seen && String(c.sourceId) === String(src.id)).length;
 
   let info = '';
@@ -609,9 +623,15 @@ function sourceCard(src, vm) {
     }
   }
 
-  const err = snap && !snap.ok && on ? html`<div class="alert bad src-err">${icon('alert', 18)}<div>
-      ${isCorsError(snap.error) ? html`<b>${CORS_HELP}.</b>` : snap.error}
-    </div></div>` : '';
+  let err = '';
+  if (snap && !snap.ok) {
+    err = html`<div class="alert bad src-err">${icon('alert', 18)}<div>${isCorsError(snap.error) ? `${CORS_HELP}.` : snap.error}</div></div>`;
+  } else if (lateErr) {
+    err = html`<div class="alert warn src-err">${icon('alert', 18)}<div>
+      Последняя проверка ${relAgo(lateErr.at, vm.now)} не удалась: ${isCorsError(lateErr.error) ? `${CORS_HELP}.` : lateErr.error}
+      <span class="muted"> Показываю данные прошлой загрузки.</span>
+    </div></div>`;
+  }
 
   return html`<article class="card src-card ${on ? '' : 'off'} st-${statusCls}" data-src="${src.id}">
     <div class="src-top">
@@ -735,11 +755,9 @@ function conflictsCard(vm) {
   return html`<section class="card src-conf" aria-label="Расхождения с сайтами">
     <div class="card-head">
       <div class="card-title">${icon('alert', 18)}<span>Расхождения</span><span class="badge warn">${vm.conflicts.length}</span></div>
-      <div class="actions">
-        <span class="muted small src-conf-range">на ${CONFLICT_DAYS} дней</span>
-        ${vm.conflicts.length > 1 ? html`<button type="button" class="btn sm ghost" data-act="cf-seen-all">Скрыть все</button>` : ''}
-      </div>
+      ${vm.conflicts.length > 1 ? html`<div class="actions"><button type="button" class="btn sm ghost" data-act="cf-seen-all">Скрыть все</button></div>` : ''}
     </div>
+    <p class="src-conf-sub">Ближайшие ${CONFLICT_DAYS} дней: где твоё расписание не совпадает с сайтом или события пересекаются</p>
     <div class="list src-cf-list">
       ${list.map(c => {
         const k = conflictKind(c);
@@ -751,10 +769,10 @@ function conflictsCard(vm) {
           <div class="item-main">
             <div class="item-title">${c.title}</div>
             <div class="item-sub src-cf-details">${c.details}</div>
+            ${day ? html`<button type="button" class="src-link-btn src-cf-open" data-act="cf-open" data-id="${c.id}">${icon('calendar', 14)}Открыть в расписании</button>` : ''}
             <div class="src-cf-actions">
               ${fix ? html`<button type="button" class="btn sm primary" data-act="cf-fix" data-id="${c.id}">${icon('refresh', 16)}<span>Обновить по сайту</span></button>` : ''}
-              ${day ? html`<button type="button" class="btn sm" data-act="cf-open" data-id="${c.id}">${icon('calendar', 16)}<span>${fmtDayLabel(day, vm.t)}</span></button>` : ''}
-              <button type="button" class="btn sm ghost" data-act="cf-seen" data-id="${c.id}">${icon('check', 16)}<span>Понятно</span></button>
+              <button type="button" class="btn sm ${fix ? 'ghost' : ''}" data-act="cf-seen" data-id="${c.id}">Понятно</button>
             </div>
           </div>
         </div>`;
@@ -920,11 +938,22 @@ async function refreshOne(id, { quietOk = false } = {}) {
   } catch (err) {
     toast(`Не удалось обновить: ${err?.message || err}`, { kind: 'bad', ms: 5000 });
   } finally {
+    if (res) noteResult(res, [id]);
     busy.delete(id);
     rerender();
   }
   if (res) reportOne(src, res, { hadOk, quietOk });
   return res;
+}
+
+/** Запомнить неудачные попытки (и забыть удачные) — для плашки в карточке. */
+function noteResult(res, ids) {
+  const now = Date.now();
+  const bad = new Map((res?.errors || []).map(e => [String(e.sourceId), e.error]));
+  for (const id of ids.map(String)) {
+    if (bad.has(id)) lastErrors.set(id, { at: now, error: String(bad.get(id) || '') });
+    else lastErrors.delete(id);
+  }
 }
 
 function reportOne(src, res, { hadOk, quietOk }) {
@@ -960,6 +989,7 @@ async function refreshAll() {
   } catch (err) {
     toast(`Не удалось обновить: ${err?.message || err}`, { kind: 'bad', ms: 5000 });
   } finally {
+    if (res) noteResult(res, list.map(s => s.id));
     busyAll = false;
     for (const s of list) busy.delete(s.id);
     rerender();
@@ -1207,8 +1237,8 @@ function previewHtml(m, draft, viaProxy) {
   if (!m.ok) {
     return html`<div class="src-pv bad">
       <div class="src-pv-head">${icon('alert', 18)}<span>${m.cors && !viaProxy ? 'Сайт не пускает браузер (CORS)' : 'Не получилось загрузить'}</span></div>
-      <div class="src-pv-text">${m.cors ? CORS_HELP : m.error}.</div>
-      ${m.cors && !viaProxy ? html`<div class="src-pv-acts"><button type="button" class="btn sm" data-use-proxy>${icon('link', 16)}<span>Указать прокси</span></button><a class="btn sm ghost" href="#/settings?tab=bot" data-sheet-close>${icon('zap', 16)}<span>Настроить бота</span></a></div>` : ''}
+      <div class="src-pv-text">${m.cors ? 'Сайт не разрешает загрузку из браузера. Проверять его сможет бот (Настройки → Бот), а отсюда — через CORS-прокси ниже' : m.error}.</div>
+      ${m.cors && !viaProxy ? html`<div class="src-pv-acts"><button type="button" class="btn sm" data-use-proxy>${icon('link', 16)}<span>Указать прокси</span></button><a class="btn sm ghost" href="#/settings?tab=bot" data-sheet-close>${icon('zap', 16)}<span>Бот</span></a></div>` : ''}
       ${m.cors && viaProxy ? html`<div class="src-pv-text muted">Через прокси тоже не вышло — проверь адрес прокси или доверь проверку боту.</div>` : ''}
       ${!m.cors && /не ответил/.test(m.error) ? html`<div class="src-pv-text muted">Сайт может быть перегружен — источник всё равно можно сохранить, бот попробует позже.</div>` : ''}
       ${stale}
@@ -1296,5 +1326,5 @@ export default {
 export const __test = {
   hostOf, isCorsError, validateUrl, validateProxy, valuesFromSource, sourceFromValues, configKey, fmtEvery,
   nextItem, countInDays, itemWhen, previewModel, conflictKind, liveConflicts, feedKey, groupChanges,
-  oldChangeIds, sitePatch, planSiteUpdate, PRESETS,
+  oldChangeIds, sitePatch, planSiteUpdate, relAgo, PRESETS,
 };

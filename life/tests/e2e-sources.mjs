@@ -14,7 +14,10 @@
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
-import { run, MIME } from './e2e.mjs';
+import { run, MIME, IGNORED_CONSOLE } from './e2e.mjs';
+
+// «Закрытый» сайт имитируем обрывом запроса — браузер сам пишет об этом в консоль (это не ошибка приложения).
+IGNORED_CONSOLE.push(/^Failed to load resource: net::ERR_FAILED$/);
 
 const args = process.argv.slice(2);
 const argVal = (name, def = '') => {
@@ -442,6 +445,7 @@ async function checkJsonAndPage(h) {
   await shot(h, 'form-json');
   await submitForm(h);
   await waitNoSheet(h);
+  await h.clearToasts();
   h.server.vars.jsonVariant = 2;
   await card(h, 'API вуза (e2e)').locator('[data-act="refresh"]').click();
   const t = await waitToast(h, /API вуза/);
@@ -465,6 +469,7 @@ async function checkJsonAndPage(h) {
   await shot(h, 'form-page');
   await submitForm(h);
   await waitNoSheet(h);
+  await h.clearToasts();
   const pc = await h.evaluate(() => {
     const el = [...document.querySelectorAll('.p-sources .src-card')].find(c => /Сайт кафедры/.test(c.textContent));
     return el && { badge: el.querySelector('.src-meta .badge')?.textContent.trim(), status: el.querySelector('.src-status')?.textContent.trim(), sample: el.querySelector('.src-sample-v')?.textContent.trim() };
@@ -488,7 +493,7 @@ async function checkJsonAndPage(h) {
   // Лента: фильтр по источнику, раскрытие изменения страницы, «Отметить всё прочитанным».
   await h.goto('sources', { tab: 'changes' });
   const chips = await h.evaluate(() => [...document.querySelectorAll('.p-sources .src-filter .chip')].map(c => c.textContent.replace(/\s+/g, ' ').trim()));
-  expect(h, chips.length === 3 && /^Все/.test(chips[0]), `фильтры: ${chips}`);
+  expect(h, chips.length === 4 && /^Все/.test(chips[0]), `фильтры: ${chips}`);
   await h.page.locator('.p-sources .src-filter .chip', { hasText: 'Сайт кафедры' }).click();
   await h.settle(200);
   const rows = await h.evaluate(() => [...document.querySelectorAll('.p-sources .src-ch')].map(r => r.className));
@@ -740,13 +745,13 @@ async function checkConflicts(h) {
   await h.clearToasts();
 
   // «Понятно» — расхождение скрыто и сохранено как прочитанное.
-  const before = await h.page.locator('.p-sources .src-cf').count();
+  const totalOf = () => h.evaluate(() => Number(document.querySelector('.p-sources .src-conf .card-title .badge')?.textContent || 0));
+  const before = await totalOf();
   const firstTitle = await h.page.locator('.p-sources .src-cf .item-title').first().textContent();
   await h.page.locator('.p-sources .src-cf [data-act="cf-seen"]').first().click();
   await h.settle(250);
-  const afterN = await h.page.locator('.p-sources .src-cf').count();
-  const total = await h.evaluate(() => Number(document.querySelector('.p-sources .src-conf .card-title .badge')?.textContent || 0));
-  expect(h, afterN < before || total < before, `«Понятно» не скрыло: ${before} → ${afterN}`);
+  const afterN = await totalOf();
+  expect(h, afterN === before - 1, `«Понятно» не скрыло: ${before} → ${afterN}`);
   const stored = await st(h, (store, t) => store.all('changes').find(c => c.kind === 'conflict' && c.title === t), firstTitle.trim());
   expect(h, stored && stored.seen === true, `«Понятно» не сохранило расхождение: ${JSON.stringify(stored)}`);
   await h.clearToasts();

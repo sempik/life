@@ -1,8 +1,10 @@
 /* Стили страницы «sources». Все селекторы — внутри .p-sources (шторки — .sh-sources). */
 
 /* ---------- Шапка и вкладки ---------- */
-.p-sources .src-titles { min-width: 0; }
-.p-sources .page-head .actions { align-self: center; }
+.p-sources .page-head { flex-wrap: nowrap; align-items: flex-start; }
+.p-sources .src-titles { flex: 1 1 0; min-width: 0; }
+.p-sources .src-titles h1 { overflow-wrap: anywhere; }
+.p-sources .page-head .actions { align-self: center; flex-wrap: nowrap; }
 .p-sources .src-refresh-all.loading { color: transparent; }
 
 .p-sources .src-tabs {
@@ -438,12 +440,15 @@
 .p-sources .src-conf { border-color: color-mix(in srgb, var(--warn) 35%, var(--line)); }
 .p-sources .src-conf .card-head { margin-bottom: 4px; }
 .p-sources .src-conf .card-title .ico { color: var(--warn); }
-.p-sources .src-conf-range { white-space: nowrap; }
+.p-sources .src-conf-sub { margin: -4px 0 2px; font-size: 13px; color: var(--muted); }
 .p-sources .src-conf .card-head .btn { height: 36px; }
 .p-sources .src-cf { align-items: flex-start; padding: 14px 0; }
 .p-sources .src-cf .item-title { line-height: 1.35; }
 .p-sources .src-cf-details { line-height: 1.45; color: var(--text-2); }
-.p-sources .src-cf-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.p-sources .src-cf-open { align-self: flex-start; margin-top: 2px; font-size: 13px; }
+.p-sources .src-cf-open:empty { display: none; }
+.p-sources .src-cf-open .ico { margin-right: 2px; }
+.p-sources .src-cf-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .p-sources .src-cf-actions .btn { height: 40px; }
 .p-sources .src-conf-more { margin-top: 4px; height: 40px; color: var(--text-2); }
 
@@ -478,7 +483,7 @@
 .sh-sources .src-howto-steps { margin: 8px 0 0; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; color: var(--text-2); line-height: 1.45; }
 .sh-sources .src-howto-steps li::marker { color: var(--info); font-weight: 600; }
 
-.sh-sources .field[data-name="kind"] .chip { height: 40px; }
+.sh-sources .field[data-name="kind"] .chip { height: 40px; padding: 0 12px; }
 .sh-sources .src-kind-hint { margin-top: 2px; }
 
 .sh-sources .src-check {
@@ -532,12 +537,12 @@
 }
 .sh-sources .src-pv-list li {
   display: grid;
-  grid-template-columns: 128px minmax(0, 1fr);
+  grid-template-columns: 162px minmax(0, 1fr);
   column-gap: 10px;
   padding: 8px 12px;
 }
 .sh-sources .src-pv-list li + li, .sh-sources .src-pv-lines li + li { border-top: 1px solid var(--line); }
-.sh-sources .src-pv-when { color: var(--muted); font-size: 12.5px; padding-top: 1px; }
+.sh-sources .src-pv-when { grid-row: span 2; color: var(--muted); font-size: 12.5px; padding-top: 2px; white-space: nowrap; }
 .sh-sources .src-pv-title { font-weight: 500; overflow-wrap: anywhere; }
 .sh-sources .src-pv-sub { grid-column: 2; font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
 .sh-sources .src-pv-lines { counter-reset: ln; }
@@ -559,6 +564,7 @@
 
 @media (max-width: 419.98px) {
   .sh-sources .src-pv-list li { grid-template-columns: minmax(0, 1fr); row-gap: 2px; }
+  .sh-sources .src-pv-when { grid-row: auto; }
   .sh-sources .src-pv-sub { grid-column: 1; }
   /* В подвале формы: «Удалить» — иконкой, чтобы «Сохранить» поместилась. */
   .sh-src-form .sheet-foot .btn.danger span { display: none; }
