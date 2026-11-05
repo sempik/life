@@ -181,6 +181,7 @@ function addTaskReminders(st, inWindow, add) {
   for (const t of st.tasks) {
     if (t.done || !isYmd(t.due)) continue;
     const remind = t.remind == null || t.remind === '' || !Number.isFinite(Number(t.remind)) ? null : Number(t.remind);
+    if (remind != null && remind < 0) continue; // remind: -1 — «без напоминания»
     const hasTime = isHm(t.dueTime);
     const at = hasTime ? toMs(t.due, t.dueTime) - (remind ?? 0) * MIN_MS : toMs(t.due, remindTime);
     if (!inWindow(at)) continue;

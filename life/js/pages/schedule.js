@@ -404,6 +404,7 @@ function pageHead() {
   return html`<div class="page-head sc-head">
     <h1>Расписание</h1>
     <div class="actions">
+      <button type="button" class="btn sm sc-today-btn mobile-only" data-act="today">Сегодня</button>
       <button type="button" class="icon-btn bordered" data-act="menu" aria-label="Импорт, экспорт и подписка" title="Импорт, экспорт, подписка">${icon('more', 20)}</button>
       <button type="button" class="btn primary desktop-only" data-act="add">${icon('plus', 18)}<span>Добавить</span></button>
     </div>
@@ -429,15 +430,13 @@ function toolbar(ctx) {
       ${VIEWS.map(v => html`<button type="button" role="tab" class="${v.id === view ? 'on' : ''}" aria-selected="${String(v.id === view)}" data-act="view" data-view="${v.id}">${v.label}</button>`)}
     </div>
     <div class="sc-nav">
+      <button type="button" class="icon-btn bordered sc-prev" data-act="prev" aria-label="${view === 'week' ? 'Предыдущая' : 'Предыдущий'} ${unit}" title="Назад (←)">${icon('chevron-left', 20)}</button>
       <div class="sc-label" aria-live="polite">
         <span class="sc-label-main">${main}</span>
         ${sub ? html`<span class="sc-label-sub">${sub}</span>` : ''}
       </div>
-      <div class="sc-arrows">
-        <button type="button" class="icon-btn bordered" data-act="prev" aria-label="${view === 'week' ? 'Предыдущая' : 'Предыдущий'} ${unit}" title="Назад (←)">${icon('chevron-left', 20)}</button>
-        <button type="button" class="btn sm sc-today-btn" data-act="today" title="Сегодня (T)">Сегодня</button>
-        <button type="button" class="icon-btn bordered" data-act="next" aria-label="${view === 'week' ? 'Следующая' : 'Следующий'} ${unit}" title="Вперёд (→)">${icon('chevron-right', 20)}</button>
-      </div>
+      <button type="button" class="icon-btn bordered sc-next" data-act="next" aria-label="${view === 'week' ? 'Следующая' : 'Следующий'} ${unit}" title="Вперёд (→)">${icon('chevron-right', 20)}</button>
+      <button type="button" class="btn sm sc-today-btn desktop-only" data-act="today" title="Сегодня (T)">Сегодня</button>
     </div>
   </div>`;
 }
