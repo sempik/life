@@ -121,7 +121,7 @@ life/
 { title, notes: '', due: null|'YYYY-MM-DD', dueTime: null|'HH:MM',
   priority: 0|1|2,               // 0 обычная, 1 важная, 2 срочная
   done: false, doneAt: null|ms,
-  remind: null|number,           // минут до срока; если dueTime нет — в settings.taskRemindTime в день срока
+  remind: null|number,           // минут до срока; null/число без dueTime — в settings.taskRemindTime в день срока; -1 — без напоминания
   repeat: null|'daily'|'weekly'|'monthly',  // при выполнении создаётся следующая
   tags: [], eventId: null }      // eventId — привязка к паре/событию («ДЗ к паре»)
 ```
@@ -395,7 +395,34 @@ refreshSources({ only? })    // загрузка источников прямо
 
 ---
 
+### Контракт между разделами
+
+Разделы вызывают друг друга только через ленивый `import('./<раздел>.js')` и именованные
+экспорты (если функции нет — открывают раздел через `navigate`):
+
+| раздел | экспорт | что делает |
+|---|---|---|
+| `schedule` | `openEventForm(event?, defaults?)` → `Promise<event\|null>` | форма события; `defaults` — `{date,start,end,type,title}`, объект без `id` = defaults |
+| `schedule` | `openOccurrence(occ)` → `{el,close}\|null` | карточка вхождения (своего или с сайта) |
+| `tasks` | `openTaskForm(task?, defaults?, {onSaved}?)` | форма задачи; defaults — `{title,due,dueTime,eventId,priority,tags,notes,remind,repeat}` |
+| `tasks` | `toggleTask(id)` → `Promise<task\|null>` | выполнить/вернуть (+ следующая для повторяющейся, тост «Отменить») |
+| `food` | `openFoodSearch({date,meal,q}?)` → `{el,close}` | поиск продукта → порция (так открывает «Добавить → Еда») |
+| `food` | `openMealForm(meal?, {date,meal}?)`, `addWater(ml, date?)` | ручная запись еды; вода с тостом «Отменить» |
+| `habits` | `openHabitQuick()`, `openHabitForm(habit?, defaults?)`, `logHabit(id, type, count?, date?, {time,note,toast}?)` | отметки; `logHabit` для `slip`/`craving` сам показывает тост |
+| `sources` | `openSourceForm(source?, {preset}?)` | форма источника |
+| `settings` | `openOnboarding()` → `{el,close}` | мастер первого запуска (app.js, если `!settings.onboarded`) |
+
+Ярлыки манифеста: `#/food?add=1` открывает поиск еды (раздел сам снимает параметр).
+
 ## 9. Тесты
+
+- Всё сразу: `node life/tests/run-all.mjs [--shots DIR]` — юнит-тесты в Europe/Moscow,
+  America/New_York, Asia/Vladivostok, затем `e2e.mjs` и все `e2e-*.mjs` по очереди; код выхода 1,
+  если упало хоть что-то (`--unit-only`, `--e2e-only`, `--only today,journey`, `--verbose`).
+- `e2e-journey.mjs` — сквозной сценарий живого пользователя на телефоне и ПК: мастер → пара по
+  числителю и встреча → задача «сдать лабу пт 18:00 !» → «гречка 200 г» и вода → «Курение» и
+  «Хочется» → «Сегодня» сходится с данными → перезагрузка → светлая тема → все разделы
+  (горизонтальная прокрутка, текст за краем, контраст < 3).
 
 - Юнит: `TZ=Europe/Moscow node --test life/tests/*.test.mjs` (и в других зонах — тесты от зоны не зависят).
 - Дымовой e2e: `node life/tests/e2e.mjs [--shots DIR] [--only mobile|desktop] [--tz IANA]` —

@@ -115,4 +115,5 @@
 ---
 
 Для разработчиков: устройство приложения — [ARCHITECTURE.md](ARCHITECTURE.md);
-тесты — `node --test life/tests/*.test.mjs`, браузерные — `node life/tests/e2e.mjs`.
+тесты — `node --test life/tests/*.test.mjs`, браузерные — `node life/tests/e2e.mjs`, всё сразу
+(юнит-тесты в трёх часовых поясах и все e2e) — `node life/tests/run-all.mjs`.

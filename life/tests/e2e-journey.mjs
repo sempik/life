@@ -406,6 +406,50 @@ async function stepReload(h) {
   await checkToday(h, 'после перезагрузки');
 }
 
+/** Шторка «Добавить»: каждая кнопка открывает свой раздел; вода — с «Отменить». */
+async function stepQuickAdd(h) {
+  h.step = 'quick-add';
+  const open = async () => {
+    await h.page.locator('[data-quick-add]:visible').first().click();
+    await h.page.waitForSelector('.sheet-layer.open .quick-grid', { timeout: 5e3 });
+  };
+  const closeAll = async what => {
+    await h.page.evaluate(async () => (await import('./js/core/ui.js')).closeAllSheets());
+    await h.noSheet(what);
+  };
+  for (const [q, cls, title] of [['event', 'sh-evform', /Новое событие/], ['task', 'sh-tasks', /Новая задача/], ['meal', 'sh-fs', /Добавить еду/], ['habit', 'sh-habit-quick', /./]]) {
+    await open();
+    await h.page.locator(`.sheet-layer.open [data-quick="${q}"]`).click();
+    const ok = await h.page.waitForSelector(`.sheet-layer.open .sheet.${cls}`, { timeout: 5e3 }).then(() => true, () => false);
+    if (!h.expect(ok, `«Добавить» → ${q}: не открылась шторка .${cls}`)) { await closeAll(q); continue; }
+    await h.settle(150);
+    const t = (await h.top().locator('.sheet-title').textContent().catch(() => '')) || '';
+    h.expect(title.test(t), `«Добавить» → ${q}: заголовок «${t}»`);
+    if (q === 'habit') {
+      const txt = await h.top().innerText();
+      h.expect(/Курение/.test(txt), `быстрая отметка привычки: нет «Курение» («${txt.slice(0, 120)}»)`);
+      await h.shot('28-quick-habit');
+    }
+    await h.overflow(`«Добавить» → ${q}`);
+    await closeAll(q);
+  }
+  // Вода +250 и «Отменить».
+  const sum = () => h.store((store, d) => store.all('water').filter(w => w.date === d.today()).reduce((a, w) => a + w.ml, 0));
+  const before = await sum();
+  await h.clearToasts();
+  await open();
+  await h.page.locator('.sheet-layer.open [data-quick="water"]').click();
+  await h.settle(300);
+  h.expect((await sum()) === before + 250, `«Вода +250»: было ${before}, стало ${await sum()}`);
+  const undo = h.page.locator('#toasts .toast button', { hasText: 'Отменить' }).last();
+  if (h.expect(await undo.count(), '«Вода +250»: нет тоста с «Отменить»')) {
+    await undo.click();
+    await h.settle(250);
+    h.expect((await sum()) === before, `«Отменить» воду: ${await sum()} вместо ${before}`);
+  }
+  await h.clearToasts();
+}
+
 async function stepPages(h, theme) {
   h.step = `pages-${theme}`;
   for (const id of ROUTES) {
@@ -499,6 +543,7 @@ async function main() {
         await stepHabit(h);
         await stepToday(h);
         await stepReload(h);
+        await stepQuickAdd(h);
         await stepPages(h, 'dark');
         h.step = 'contrast-dark';
         for (const id of ROUTES) { await h.goto(id); await contrast(h, `тёмная #/${id}`); }

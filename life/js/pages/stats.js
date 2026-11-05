@@ -800,7 +800,9 @@ function badBlock(c, b) {
   const vals = bucketValues(B.list, byDate, d => d.s, { mode: 'sum' });
   const unit = h.unit || 'раз';
   const stats = b.quit
-    ? [html`<span><b>${pluralN(b.streak.current, DAY_FORMS)}</b> без срывов</span>`, html`<span>рекорд <b>${pluralN(b.streak.best, DAY_FORMS)}</b></span>`]
+    ? [html`<span><b>${b.streak.current > 0 ? pluralN(b.streak.current, DAY_FORMS) : 'меньше дня'}</b> без срывов</span>`,
+      // Рекорд — только если он больше текущей серии (иначе «0 дней · рекорд 0 дней»).
+      b.streak.best > b.streak.current ? html`<span>рекорд <b>${pluralN(b.streak.best, DAY_FORMS)}</b></span>` : '']
     : [html`<span>в лимите <b>${b.okDays} из ${pluralN(b.days, DAY_GEN)}</b></span>`, html`<span>серия <b>${pluralN(b.streak.current, DAY_FORMS)}</b> · рекорд ${b.streak.best}</span>`];
   if (b.cravings) stats.push(html`<span>удержался <b>${b.cravings}</b> ${plural(b.cravings, ['раз', 'раза', 'раз'])}</span>`);
   const chart = b.slips

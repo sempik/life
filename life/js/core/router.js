@@ -20,6 +20,7 @@ let rerenderTimer = null;
 let pendingColls = new Set();
 let deferredUntilBlur = false;
 let titleObserver = null;
+let titleMutations = null;
 let syncApi = null;
 let started = false;
 
@@ -382,18 +383,34 @@ function observeTitle(root) {
   const topbar = document.getElementById('topbar');
   if (!topbar) return;
   titleObserver?.disconnect();
-  const h1 = root.querySelector('.page-head h1');
+  titleMutations?.disconnect();
+  let h1 = root.querySelector('.page-head h1');
   if (!h1 || typeof IntersectionObserver !== 'function') {
     topbar.classList.add('show-title');
     return;
   }
   topbar.classList.remove('show-title');
   const topbarH = topbar.getBoundingClientRect().height || 56;
-  titleObserver = new IntersectionObserver(([entry]) => {
+  titleObserver = new IntersectionObserver(entries => {
+    const entry = entries[entries.length - 1];
+    if (!entry.target.isConnected) return; // заголовок заменён перерисовкой — следим за новым (ниже)
     topbar.classList.toggle('show-title', !entry.isIntersecting && entry.boundingClientRect.top < topbarH);
     topbar.classList.toggle('scrolled', window.scrollY > 4);
   }, { rootMargin: `-${Math.round(topbarH)}px 0px 0px 0px`, threshold: 0 });
   titleObserver.observe(h1);
+  // Страницы перерисовывают себя сами (root.innerHTML = …): старый h1 отцепляется, и без этого
+  // в шапке «залипал» заголовок, хотя крупный h1 на месте.
+  if (typeof MutationObserver === 'function') {
+    titleMutations = new MutationObserver(() => {
+      const next = root.querySelector('.page-head h1');
+      if (next === h1) return;
+      if (h1) titleObserver.unobserve(h1);
+      h1 = next;
+      if (h1) titleObserver.observe(h1);
+      else topbar.classList.add('show-title');
+    });
+    titleMutations.observe(root, { childList: true, subtree: true });
+  }
 }
 
 if (typeof window !== 'undefined') {

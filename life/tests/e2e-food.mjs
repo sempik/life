@@ -501,10 +501,16 @@ async function checkMealForm(h) {
   expect(h, m && m.kcal === 330, '«Отменить» не вернул запись');
   await h.clearToasts();
 
-  // Новая запись через общее «Добавить» → «Еда».
+  // Общее «Добавить» → «Еда» открывает поиск продуктов (как «Добавить еду» в разделе).
   await h.page.locator('[data-quick-add]:visible').first().click();
   await h.page.waitForSelector('.sheet-layer.open .quick-btn[data-quick="meal"]', { timeout: 5e3 });
   await h.page.locator('.sheet-layer.open .quick-btn[data-quick="meal"]').click();
+  await waitSheet(h, 'sh-fs');
+  expect(h, (await sheetCount(h)) === 1, '«Добавить» → «Еда»: лишние шторки');
+  await h.closeSheets();
+
+  // Новая запись вручную (openMealForm без записи).
+  await h.evaluate(async () => (await import('./js/pages/food.js')).openMealForm());
   await waitSheet(h, 'sh-food-meal');
   expect(h, (await sheetTitle(h)) === 'Новая запись', `заголовок новой записи: ${await sheetTitle(h)}`);
   expect(h, await top(h).locator('[data-fs-open]').count() === 1, 'нет кнопки «Найти в базе продуктов»');
