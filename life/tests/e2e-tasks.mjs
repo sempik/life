@@ -253,6 +253,15 @@ async function checkFilters(h) {
   await h.settle(150);
   expect(h, !/tag=/.test(await hash(h)), 'повторный клик не снял тег');
 
+  // Клавиатура: фокус на сегменте переживает перерисовку.
+  if (h.vp === 'desktop') {
+    await h.page.locator('.p-tasks .tk-seg [data-filter="upcoming"]').focus();
+    await h.page.keyboard.press('Enter');
+    await h.settle(150);
+    const f = await h.evaluate(() => document.activeElement?.dataset?.filter || document.activeElement?.tagName);
+    expect(h, f === 'upcoming', `фокус после Enter на сегменте: ${f}`);
+  }
+
   // Обновление страницы сохраняет фильтр из адреса.
   await setFilter(h, 'done');
   await h.boot({ reload: true });

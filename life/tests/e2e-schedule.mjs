@@ -591,6 +591,7 @@ async function checkWeekGrid(h) {
       a: ev('E2E Наложение А'), b: ev('E2E Наложение Б'), early: ev('E2E Ранняя'), night: ev('E2E Ночная'),
       allDay: [...grid.querySelectorAll('.sc-wg-adev')].map(x => x.textContent.trim()),
       now: grid.querySelectorAll('.wg-col.today .wg-now').length,
+      nowInGrid: (() => { const d = new Date(); const m = d.getHours() * 60 + d.getMinutes(); return m >= Number(grid.dataset.h0) * 60 && m <= Number(grid.dataset.h1) * 60; })(),
     };
   });
   if (g.h0 !== '6' || g.h1 !== '24') h.error('week', `часы сетки ${g.h0}–${g.h1}, ожидалось 6–24`);
@@ -598,7 +599,7 @@ async function checkWeekGrid(h) {
   if (g.early[0]?.top !== '0.000' || g.early[0]?.len !== '1.500') h.error('week', `ранняя пара: ${JSON.stringify(g.early)}`);
   if (g.night.length !== (isoDowJs(t) === 7 ? 1 : 2)) h.error('week', `ночное событие разбито на ${g.night.length} блок(а): ${JSON.stringify(g.night)}`);
   if (!g.allDay.includes('E2E Весь день')) h.error('week', `нет события «весь день»: ${g.allDay}`);
-  if (g.now !== 1) h.error('week', `линия «сейчас»: ${g.now}`);
+  if (g.now !== (g.nowInGrid ? 1 : 0)) h.error('week', `линия «сейчас»: ${g.now} (сейчас в сетке: ${g.nowInGrid})`);
   await noOverflow(h, 'неделя с событиями');
   await shot(h, 'week-grid');
 
@@ -969,7 +970,70 @@ async function checkLight(h) {
   await h.settle(200);
 }
 
+/** Контракт для других разделов: openEventForm(event?, defaults?) и openOccurrence(occ). */
+async function checkApi(h) {
+  const t = await todayYmd(h);
+  await h.goto('today');
+  const later = await addDaysIn(h, t, 2);
+  // Один аргумент без id — подстановка.
+  await h.evaluate(d => import('./js/pages/schedule.js').then(m => { m.openEventForm({ date: d }); }), later);
+  if (await waitSheet(h, 'sh-evform', 'openEventForm({date})')) {
+    const v = await sheet(h, 'sh-evform').evaluate(el => [el.querySelector('.sheet-title').textContent, el.querySelector('[name=date]').value]);
+    if (v.join() !== `Новое событие,${later}`) h.error('api', `openEventForm({date}): ${v}`);
+    await h.closeSheets();
+  }
+  // (null, defaults) — как зовёт «Сегодня»; промис отдаёт сохранённую запись.
+  await h.evaluate(d => {
+    window.__e2eSaved = import('./js/pages/schedule.js').then(m => m.openEventForm(null, { date: d, start: '13:00', end: '14:00', type: 'meeting', title: 'E2E API' }));
+  }, later);
+  if (await waitSheet(h, 'sh-evform', 'openEventForm(null, defaults)')) {
+    const v = await sheet(h, 'sh-evform').evaluate(el => ({
+      title: el.querySelector('[name=title]').value, start: el.querySelector('[name=start]').value, end: el.querySelector('[name=end]').value,
+      type: el.querySelector('.field[data-name=type] .chip.on')?.textContent.trim(), who: el.querySelector('.field[data-name=who] .field-label')?.textContent,
+    }));
+    if (JSON.stringify(v) !== JSON.stringify({ title: 'E2E API', start: '13:00', end: '14:00', type: 'Встреча', who: 'Участники' })) h.error('api', `defaults: ${JSON.stringify(v)}`);
+    await sheet(h, 'sh-evform').locator('.sheet-submit').click();
+    await waitNoSheet(h, 'openEventForm → сохранить');
+    const saved = await h.evaluate(() => window.__e2eSaved);
+    if (saved?.title !== 'E2E API' || saved?.date !== later || saved?.type !== 'meeting') h.error('api', `промис openEventForm: ${JSON.stringify(saved)}`);
+    // Тост «Показать» (мы не в разделе) → раздел на этой дате.
+    await clickToastAction(h, /Добавлено: E2E API/, '«Показать»');
+    const p = await hashParams(h);
+    if (p.date !== later || p.view !== 'day') h.error('api', `«Показать»: ${JSON.stringify(p)}`);
+    // openOccurrence: запись события (без occDate), вхождение из dayAgenda, неизвестное.
+    await h.goto('today');
+    const r = await h.evaluate(async ([id, d]) => {
+      const [m, { store }, { dayAgenda }] = await Promise.all([import('./js/pages/schedule.js'), import('./js/core/store.js'), import('./js/lib/recur.js')]);
+      const a = m.openOccurrence(store.get('events', id));
+      const t1 = document.querySelector('.sheet-layer:last-child .sheet-title')?.textContent;
+      await a?.close();
+      const occ = dayAgenda(store.reminderState(), d).find(o => o.eventId === id);
+      const b = m.openOccurrence(occ);
+      const t2 = document.querySelector('.sheet-layer:last-child .sc-occ-day')?.textContent;
+      await b?.close();
+      const c = m.openOccurrence({ eventId: 'nope', occDate: d });
+      return { t1, t2, c: c === null };
+    }, [saved?.id, later]);
+    if (r.t1 !== 'E2E API' || !/\d+ [а-я]+$/.test(r.t2 || '') || !r.c) h.error('api', `openOccurrence: ${JSON.stringify(r)}`);
+    if (!(await toasts(h)).some(x => /Этого события уже нет/.test(x))) h.error('api', 'нет тоста для неизвестного события');
+    await h.clearToasts();
+    // Вхождение (Occ) в openEventForm у разового — сразу форма.
+    await h.evaluate(async ([id, d]) => {
+      const [m, { store }, { dayAgenda }] = await Promise.all([import('./js/pages/schedule.js'), import('./js/core/store.js'), import('./js/lib/recur.js')]);
+      m.openEventForm(dayAgenda(store.reminderState(), d).find(o => o.eventId === id));
+    }, [saved?.id, later]);
+    if (await waitSheet(h, 'sh-evform', 'openEventForm(occ)')) {
+      const title = await sheet(h, 'sh-evform').locator('.sheet-title').textContent();
+      if (title !== 'Изменить событие') h.error('api', `openEventForm(occ): ${title}`);
+      await h.closeSheets();
+    }
+  }
+  await removeEvents(h, (e => /^E2E /.test(e.title)).toString());
+  await h.clearToasts();
+}
+
 const SCHEDULE_CHECKS = [
+  { name: 'schedule-api', phase: 'fresh', run: checkApi },
   { name: 'schedule-fresh-views', phase: 'fresh', run: checkFreshViews },
   { name: 'schedule-edit-delete', phase: 'fresh', run: checkEditDelete },
   { name: 'schedule-week-grid', phase: 'fresh', run: checkWeekGrid },

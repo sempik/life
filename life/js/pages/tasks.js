@@ -463,7 +463,11 @@ function build(el) {
   root = el;
   el.innerHTML = String(skeletonHtml());
   unsubscribe?.();
-  unsubscribe = store.on(({ colls }) => { if (RELEVANT.some(c => colls.has(c))) schedulePaint(); });
+  const off = store.on(({ colls }) => { if (RELEVANT.some(c => colls.has(c))) schedulePaint(); });
+  // Вернулись на вкладку (возможно, уже наступил другой день) — пересчитать группы.
+  const onVisible = () => { if (document.visibilityState === 'visible') schedulePaint(); };
+  document.addEventListener('visibilitychange', onVisible);
+  unsubscribe = () => { off(); document.removeEventListener('visibilitychange', onVisible); };
   el.addEventListener('click', onClick);
   el.addEventListener('keydown', onKeydown);
   const form = el.querySelector('.tk-add');
@@ -496,6 +500,10 @@ function paint() {
   const t = todayYmd();
   const c = counts(all, t);
   const $ = s => root.querySelector(s);
+  // Фокус клавиатуры в списке/фильтрах переживает перерисовку (та же кнопка той же задачи).
+  const a = document.activeElement;
+  const keep = a && ($('.tk-body')?.contains(a) || $('.tk-seg')?.contains(a))
+    ? { act: a.dataset?.act, id: a.dataset?.id, filter: a.dataset?.filter } : null;
 
   $('.tk-sub').innerHTML = String(html`${headSub(c, all.length)}`);
   $('.tk-seg').innerHTML = String(html`${segHtml(c)}`);
@@ -514,6 +522,12 @@ function paint() {
   $('.tk-body').innerHTML = String(html`${bodyHtml(all, c, t)}`);
   $('.tk-aside').innerHTML = String(asideHtml(all, c));
   updateHints();
+
+  if (keep?.act && !root.contains(document.activeElement)) {
+    const sel = keep.id ? `[data-act="${keep.act}"][data-id="${CSS.escape(keep.id)}"]`
+      : keep.filter ? `[data-act="filter"][data-filter="${CSS.escape(keep.filter)}"]` : `[data-act="${keep.act}"]`;
+    try { root.querySelector(sel)?.focus({ preventScroll: true }); } catch { /* ignore */ }
+  }
 
   // Подсветка переживает перерисовки: анимация продолжается с того же места.
   if (flash) {
