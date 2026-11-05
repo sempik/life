@@ -425,6 +425,7 @@
 }
 .p-sources .src-ch-more { color: var(--accent); font-weight: 600; }
 .p-sources .src-ch-meta .src-link-btn { font-size: 12.5px; min-height: 24px; }
+.p-sources .src-ch-meta .src-link-btn::after { inset: -9px -6px; }
 .p-sources .src-ch-side {
   flex: none;
   display: flex;
@@ -441,7 +442,7 @@
 .p-sources .src-conf .card-head { margin-bottom: 4px; }
 .p-sources .src-conf .card-title .ico { color: var(--warn); }
 .p-sources .src-conf-sub { margin: -4px 0 2px; font-size: 13px; color: var(--muted); }
-.p-sources .src-conf .card-head .btn { height: 36px; }
+.p-sources .src-conf .card-head .btn { height: 40px; margin: -6px -8px -6px 0; }
 .p-sources .src-cf { align-items: flex-start; padding: 14px 0; }
 .p-sources .src-cf .item-title { line-height: 1.35; }
 .p-sources .src-cf-details { line-height: 1.45; color: var(--text-2); }
@@ -451,6 +452,19 @@
 .p-sources .src-cf-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .p-sources .src-cf-actions .btn { height: 40px; }
 .p-sources .src-conf-more { margin-top: 4px; height: 40px; color: var(--text-2); }
+@media (min-width: 900px) {
+  /* ПК: кнопки справа от текста — карточка вдвое ниже. */
+  .p-sources .src-cf .item-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 20px;
+    row-gap: 2px;
+    align-items: center;
+  }
+  .p-sources .src-cf .item-main > :not(.src-cf-actions) { grid-column: 1; }
+  .p-sources .src-cf-open { justify-self: start; }
+  .p-sources .src-cf-actions { grid-column: 2; grid-row: 1 / span 3; margin-top: 0; flex-wrap: nowrap; justify-content: flex-end; }
+}
 
 /* ===================================================================== */
 /* Шторки: форма источника и прокси                                       */

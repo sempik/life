@@ -573,6 +573,10 @@ export function bindChartTips(root) {
   const onFocusIn = e => {
     const svg = e.target.closest?.('.ch-nav');
     if (!svg || e.target !== svg) return;
+    // Фокус от касания/мыши — подсказку покажет сам тап; от клавиатуры — последняя метка.
+    let kb = true;
+    try { kb = svg.matches(':focus-visible'); } catch { /* старый браузер */ }
+    if (!kb) return;
     const ms = navMarks(svg);
     const i = clamp(Number(svg.dataset.i ?? ms.length - 1), 0, ms.length - 1);
     if (ms[i]) show(ms[i]);

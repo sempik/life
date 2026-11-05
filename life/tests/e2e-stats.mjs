@@ -267,6 +267,7 @@ async function seedHistory(h) {
     store.put('habits', { id: 'e2e_h1', name: 'Зарядка', emoji: '🏃', kind: 'good', target: 1, unit: 'раз', days: [1, 2, 3, 4, 5, 6, 7], since: addDays(t, -9), archived: false, order: 0 });
     for (let i = 1; i <= 9; i += 2) logs.push({ id: `e2e_l${i}`, habitId: 'e2e_h1', date: addDays(t, -i), time: '08:00', type: 'done', count: 1 });
     store.bulkPut('habitLogs', logs);
+    store.bulkPut('weight', [{ id: 'e2e_wa', date: addDays(t, -6), kg: 71.2 }, { id: 'e2e_wb', date: addDays(t, -1), kg: 70.8 }]);
     await store.flush();
   });
   await h.settle(300);
@@ -331,8 +332,6 @@ async function checkTooltips(h) {
     await h.settle(80);
     expect(h, !(await tipText(h)), 'подсказка не скрылась');
     // Линия веса: «прицел».
-    await putAll(h, { weight: [{ id: 'e2e_wa', date: await ymdShift(h, -6), kg: 71.2 }, { id: 'e2e_wb', date: await ymdShift(h, -1), kg: 70.8 }] });
-    await h.settle(300);
     const col = h.page.locator('.p-stats [data-ch="weight"] .ch-m').last();
     await col.evaluate(el => el.scrollIntoView({ block: 'center' }));
     await col.hover();
@@ -345,6 +344,7 @@ async function checkTooltips(h) {
   // Клавиатура: фокус на графике → последнее значение, ← — предыдущее, Esc — скрыть.
   const svg = h.page.locator('.p-stats [data-ch="kcal"] svg');
   await svg.focus();
+  await h.page.keyboard.press('End');
   await h.settle(60);
   const t1 = await tipText(h);
   await h.page.keyboard.press('ArrowLeft');
@@ -390,6 +390,7 @@ async function checkTable(h) {
 }
 
 async function readDownload(h, loc) {
+  if (await loc.isDisabled()) throw new Error('кнопка скачивания недоступна');
   const [dl] = await Promise.all([h.page.waitForEvent('download', { timeout: 5e3 }), loc.click()]);
   const p = await dl.path();
   return { name: dl.suggestedFilename(), buf: fs.readFileSync(p) };

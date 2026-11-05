@@ -551,7 +551,7 @@ const periodText = days => `${days} ${plural(days, DAY_FORMS)}`;
 function tableBtn(id) {
   const on = tables.has(id);
   const label = on ? 'Показать график' : 'Показать таблицей';
-  return html`<button type="button" class="icon-btn st-tbl" data-act="table" data-id="${id}" aria-pressed="${on}" aria-label="${label}" title="${label}">${icon(on ? 'chart' : 'list', 20)}</button>`;
+  return html`<button type="button" class="icon-btn st-tbl" data-act="table" data-id="${id}" aria-pressed="${String(on)}" aria-label="${label}" title="${label}">${icon(on ? 'chart' : 'list', 20)}</button>`;
 }
 
 function card({ id, ic, title, insight = '', body, table = false, extra = '' }) {
@@ -919,7 +919,7 @@ function headHtml(c, { actions = true } = {}) {
     <div class="st-titles"><h1>Статистика</h1><div class="sub">${sub}</div></div>
     ${actions ? html`<div class="actions st-actions">
       <div class="seg st-period" role="group" aria-label="Период">
-        ${PERIODS.map(p => html`<button type="button" class="${p === c.period ? 'on' : ''}" data-act="period" data-v="${p}" aria-pressed="${p === c.period}">${p} ${plural(p, DAY_FORMS)}</button>`)}
+        ${PERIODS.map(p => html`<button type="button" class="${p === c.period ? 'on' : ''}" data-act="period" data-v="${p}" aria-pressed="${String(p === c.period)}">${p} ${plural(p, DAY_FORMS)}</button>`)}
       </div>
       <button type="button" class="btn st-export" data-act="export" aria-label="Экспорт CSV" title="Экспорт CSV">${icon('download', 18)}<span>Экспорт</span></button>
     </div>` : ''}
@@ -1020,8 +1020,8 @@ function openExport(period) {
     return html`
       <p class="sh-stats-intro">Таблицы для Excel и Google Таблиц: UTF-8, разделитель «;», десятичная запятая.</p>
       <div class="seg block sh-stats-scope" role="group" aria-label="Какие записи">
-        <button type="button" class="${scope === 'period' ? 'on' : ''}" data-scope="period" aria-pressed="${scope === 'period'}">За ${periodText(period)}</button>
-        <button type="button" class="${scope === 'all' ? 'on' : ''}" data-scope="all" aria-pressed="${scope === 'all'}">Всё время</button>
+        <button type="button" class="${scope === 'period' ? 'on' : ''}" data-scope="period" aria-pressed="${String(scope === 'period')}">За ${periodText(period)}</button>
+        <button type="button" class="${scope === 'all' ? 'on' : ''}" data-scope="all" aria-pressed="${String(scope === 'all')}">Всё время</button>
       </div>
       <div class="list sh-stats-files">
         ${list.map(x => {
