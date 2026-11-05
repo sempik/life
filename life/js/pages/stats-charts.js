@@ -344,7 +344,9 @@ export function lineChart({
   const W = Math.max(160, Math.round(width));
   const H = Math.max(100, Math.round(height));
   const ys = all.map(p => p.y);
-  const scale = niceScale(isNum(yMin) ? yMin : Math.min(...ys), isNum(yMax) ? yMax : Math.max(...ys), { maxTicks: 5 });
+  // Поля 10% сверху и снизу: точки не ложатся на край (и подпись — на ось X).
+  const yLo = Math.min(...ys), yHi = Math.max(...ys), pad = (yHi - yLo) * 0.1 || Math.abs(yHi) * 0.01 || 1;
+  const scale = niceScale(isNum(yMin) ? yMin : yLo - pad, isNum(yMax) ? yMax : yHi + pad, { maxTicks: 5 });
   const tickText = scale.ticks.map(t => fmtTick(t, scale.step));
   const xs = all.map(p => p.x);
   const xa = isNum(xMin) ? xMin : Math.min(...xs);
@@ -442,6 +444,9 @@ export function hbarChart({ rows = [], ariaLabel = '', empty = 'Нет данн�
  * Меньше двух значений → '' (рисовать нечего).
  */
 export function sparkline({ values = [], height = 28, ariaLabel = '' } = {}) {
+  // Пустое начало (до первых записей) не рисуем — линия занимает всю ширину.
+  const start = values.findIndex(v => isNum(v));
+  if (start > 0) values = values.slice(start);
   const pts = values.map((v, i) => ({ i, v: isNum(v) ? v : null })).filter(p => p.v != null);
   if (pts.length < 2) return '';
   const n = Math.max(2, values.length);

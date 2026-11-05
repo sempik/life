@@ -321,3 +321,7 @@
 .sh-stats .sh-stats-files .item:disabled { opacity: 0.5; cursor: default; }
 .sh-stats .sh-stats-files .item:disabled:hover { background: none; }
 .sh-stats .sh-stats-files .item-title { font-variant-numeric: tabular-nums; }
+
+@container (max-width: 559.98px) {
+  .p-stats .ch-table th, .p-stats .ch-table td { padding: 9px 10px; }
+}

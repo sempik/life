@@ -35,6 +35,7 @@ export const TYPES = [
 ];
 const TYPE_KEYS = TYPES.map(t => t.key);
 const DAY_FORMS = ['день', 'дня', 'дней'];
+const DAY_GEN = ['дня', 'дней', 'дней'];      // «из 1 дня», «из 5 дней»
 const TASK_FORMS = ['задача', 'задачи', 'задач'];
 const ACCENT = 'var(--accent)';
 const MUTED = 'var(--muted)';
@@ -51,6 +52,7 @@ const pct = r => Math.round(r * 100);
 /** Вода: до литра — в мл («750 мл»), дальше — в литрах («1,7 л»). → { v, u } */
 export const fmtWater = ml => (ml < 1000 ? { v: fmtNum(ml), u: 'мл' } : { v: fmtNum(ml / 1000, 1), u: 'л' });
 const shortDate = d => fmtDate(d, { short: true });
+const tableDate = d => fmtDate(d, { weekday: true, short: true });
 
 export function parsePeriod(v) {
   const n = Number(v);
@@ -598,22 +600,30 @@ function barData(B, values, { tip, note } = {}) {
 // ---------------------------------------------------------------------------
 // Плитки показателей
 
+/** Ряд для спарклайна: по дням (до 31 дня) или по неделям; value(d) → число | null. */
+export function trendSeries(from, to, value, mode = 'avg') {
+  return makeBuckets(from, to).list.map(b => {
+    const vals = rangeDays(b.from, b.to).map(value).filter(v => v != null && Number.isFinite(v));
+    if (!vals.length) return null;
+    return mode === 'sum' ? vals.reduce((s, x) => s + x, 0) : avg(vals);
+  });
+}
+
 function kpisHtml(c) {
   const items = [];
-  const seq = (m, d) => rangeDays(c.R.from, c.R.to).map(x => m.get(x) ?? d);
   if (c.mods.food) {
     const { nut, goals } = c;
     items.push(kpi({
       to: 'kcal', ic: 'utensils', label: 'Калории',
       value: nut.kcal != null ? fmtNum(nut.kcal) : '—', unit: nut.kcal != null ? 'ккал' : '',
       sub: nut.kcal != null ? `в день${num(goals.kcal) ? ` · ${pct(nut.kcal / goals.kcal)}% цели` : ''}` : 'нет записей',
-      spark: sparkline({ values: c.days.map(d => (d.meals ? d.kcal : null)), ariaLabel: 'Калории по дням' }),
+      spark: sparkline({ values: trendSeries(c.kcalFrom, c.R.to, d => (c.byDate.get(d)?.meals ? c.byDate.get(d).kcal : null)), ariaLabel: 'Динамика калорий' }),
     }));
     items.push(kpi({
       to: 'water', ic: 'droplet', label: 'Вода',
       value: nut.water != null ? fmtWater(nut.water).v : '—', unit: nut.water != null ? fmtWater(nut.water).u : '',
       sub: nut.water != null ? `в день${num(goals.water) ? ` · ${pct(nut.water / goals.water)}% нормы` : ''}` : 'нет записей',
-      spark: sparkline({ values: c.days.map(d => (d.drinks ? d.water : null)), ariaLabel: 'Вода по дням' }),
+      spark: sparkline({ values: trendSeries(c.waterFrom, c.R.to, d => (c.byDate.get(d)?.drinks ? c.byDate.get(d).water : null)), ariaLabel: 'Динамика воды' }),
     }));
     const tr = c.trend;
     const inP = c.weights.filter(w => w.date >= c.R.from && w.date <= c.R.to);
@@ -633,7 +643,7 @@ function kpisHtml(c) {
       value: h.rate != null ? String(pct(h.rate)) : '—', unit: h.rate != null ? '%' : '',
       sub: h.rate != null ? 'по плану' : h.bad.length ? 'только вредные' : 'нет полезных',
       delta: dpp ? { text: `${signed(dpp)} п.п.`, tone: dpp > 0 ? 'ok' : 'bad' } : null,
-      spark: sparkline({ values: seq(h.daily, null).map(v => (v == null ? null : v * 100)), ariaLabel: 'Выполнение привычек по дням' }),
+      spark: sparkline({ values: trendSeries(c.habFrom, c.R.to, d => (h.daily.get(d) == null ? null : h.daily.get(d) * 100)), ariaLabel: 'Динамика выполнения привычек' }),
     }));
   }
   if (c.mods.tasks) {
@@ -643,7 +653,7 @@ function kpisHtml(c) {
       value: String(tk.done), unit: '',
       sub: `выполнено${tk.onTimeRate != null ? ` · ${pct(tk.onTimeRate)}% в срок` : ''}`,
       delta: dp ? { text: signed(dp), tone: dp > 0 ? 'ok' : 'bad' } : null,
-      spark: tk.done ? sparkline({ values: seq(tk.perDay, 0), ariaLabel: 'Выполненные задачи по дням' }) : '',
+      spark: tk.done ? sparkline({ values: trendSeries(c.taskFrom, c.R.to, d => tk.perDay.get(d) ?? 0, 'sum'), ariaLabel: 'Динамика выполненных задач' }) : '',
     }));
   }
   if (c.mods.schedule) {
@@ -652,7 +662,7 @@ function kpisHtml(c) {
       to: 'schedule', ic: 'calendar', label: 'Расписание',
       value: s.count ? fmtNum(s.studyWeekly, 1) : '—', unit: s.count ? 'ч' : '',
       sub: s.count ? 'пар и встреч в неделю' : 'нет событий',
-      spark: s.count ? sparkline({ values: seq(s.perDay, 0), ariaLabel: 'Часы событий по дням' }) : '',
+      spark: s.count ? sparkline({ values: trendSeries(c.R.from, c.R.to, d => s.perDay.get(d) ?? 0, 'sum'), ariaLabel: 'Часы событий по дням' }) : '',
     }));
   }
   return html`<div class="st-kpis" data-n="${items.length}">${items}</div>`;
@@ -680,11 +690,11 @@ function kcalCard(c) {
     },
   });
   const share = kcalGoal ? html` — <b>${pct(nut.kcal / kcalGoal)}%</b> цели` : '';
-  const insight = html`В среднем <b>${fmtNum(nut.kcal)} ккал</b> в день${share}. Записи есть за ${nut.daysFed} из ${pluralN(c.period, DAY_FORMS)}.`;
+  const insight = html`В среднем <b>${fmtNum(nut.kcal)} ккал</b> в день${share}. Записи есть за ${nut.daysFed} из ${pluralN(c.period, DAY_GEN)}.`;
   const table = () => dataTable({
     caption: 'Калории и БЖУ по дням',
     cols: [{ label: 'Дата' }, { label: 'Ккал', num: true }, { label: 'Б, г', num: true }, { label: 'Ж, г', num: true }, { label: 'У, г', num: true }],
-    rows: c.days.filter(d => d.meals).reverse().map(d => [fmtDate(d.date, { weekday: true }), fmtNum(d.kcal), fmtNum(d.p), fmtNum(d.f), fmtNum(d.c)]),
+    rows: c.days.filter(d => d.meals).reverse().map(d => [tableDate(d.date), fmtNum(d.kcal), fmtNum(d.p), fmtNum(d.f), fmtNum(d.c)]),
   });
   const macro = (label, key) => {
     const g = num(goals[key]), v = nut[key] || 0;
@@ -717,12 +727,12 @@ function waterCard(c) {
     note: b => (b.value != null && B.unit === 'week' ? `в среднем · ${pluralN(b.count, DAY_FORMS)} с записями` : ''),
   });
   const wv = fmtWater(nut.water);
-  const insight = html`В среднем <b>${wv.v} ${wv.u}</b> в день${goal ? html` · норму выпил в <b>${nut.waterOk}</b> из ${pluralN(nut.daysWater, DAY_FORMS)}` : ''}.`;
+  const insight = html`В среднем <b>${wv.v} ${wv.u}</b> в день${goal ? html` · норму выпил в <b>${nut.waterOk}</b> из ${pluralN(nut.daysWater, DAY_GEN)}` : ''}.`;
   const body = tables.has(id)
     ? dataTable({
       caption: 'Вода по дням',
       cols: [{ label: 'Дата' }, { label: 'Вода, мл', num: true }, { label: 'Норма', num: true }],
-      rows: c.days.filter(d => d.drinks).reverse().map(d => [fmtDate(d.date, { weekday: true }), fmtNum(d.water), goal ? `${pct(d.water / goal)}%` : '—']),
+      rows: c.days.filter(d => d.drinks).reverse().map(d => [tableDate(d.date), fmtNum(d.water), goal ? `${pct(d.water / goal)}%` : '—']),
     })
     : slot('water', barChart, {
       data, goal, goalLabel: goal ? `норма ${fmtNum(goal)}` : '', unit: 'мл',
@@ -762,7 +772,7 @@ function weightCard(c) {
     ? dataTable({
       caption: 'Взвешивания',
       cols: [{ label: 'Дата' }, { label: 'Вес, кг', num: true }, { label: 'Среднее за 7 дней', num: true }],
-      rows: [...ma].reverse().map(e => [fmtDate(e.date, { weekday: true }), fmtNum(e.kg, 1), fmtNum(e.ma, 1)]),
+      rows: [...ma].reverse().map(e => [tableDate(e.date), fmtNum(e.kg, 1), fmtNum(e.ma, 1)]),
     })
     : html`${slot('weight', lineChart, {
       series: [
@@ -791,7 +801,7 @@ function badBlock(c, b) {
   const unit = h.unit || 'раз';
   const stats = b.quit
     ? [html`<span><b>${pluralN(b.streak.current, DAY_FORMS)}</b> без срывов</span>`, html`<span>рекорд <b>${pluralN(b.streak.best, DAY_FORMS)}</b></span>`]
-    : [html`<span>в лимите <b>${b.okDays} из ${pluralN(b.days, DAY_FORMS)}</b></span>`, html`<span>серия <b>${pluralN(b.streak.current, DAY_FORMS)}</b> · рекорд ${b.streak.best}</span>`];
+    : [html`<span>в лимите <b>${b.okDays} из ${pluralN(b.days, DAY_GEN)}</b></span>`, html`<span>серия <b>${pluralN(b.streak.current, DAY_FORMS)}</b> · рекорд ${b.streak.best}</span>`];
   if (b.cravings) stats.push(html`<span>удержался <b>${b.cravings}</b> ${plural(b.cravings, ['раз', 'раза', 'раз'])}</span>`);
   const chart = b.slips
     ? slot(`bad-${h.id}`, barChart, {
@@ -900,7 +910,7 @@ function tasksCard(c) {
     ? dataTable({
       caption: 'Выполненные задачи по дням',
       cols: [{ label: 'Дата' }, { label: 'Выполнено', num: true }],
-      rows: [...tk.perDay].filter(([, n]) => n).reverse().map(([d, n]) => [fmtDate(d, { weekday: true }), String(n)]),
+      rows: [...tk.perDay].filter(([, n]) => n).reverse().map(([d, n]) => [tableDate(d), String(n)]),
     })
     : slot('tasks', barChart, {
       data, unit: '', integer: true,
@@ -1119,5 +1129,5 @@ export default {
 export const __test = {
   parsePeriod, periodRange, chartFrom, firstDate, makeBuckets, bucketTick, bucketLabel, dailyNutrition,
   nutritionSummary, bucketValues, weightEntries, movingAverage, weightTrend, trendText, goodHabitRate,
-  habitStats, scheduleStats, dueEndMs, taskStats, fmtWater, csvCell, toCsv, csvMeals, csvWater, csvWeight, csvHabits, signed,
+  habitStats, scheduleStats, dueEndMs, taskStats, fmtWater, trendSeries, csvCell, toCsv, csvMeals, csvWater, csvWeight, csvHabits, signed,
 };
