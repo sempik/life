@@ -155,6 +155,22 @@ export function fmtQty(n, unit) {
   return `${num(n)} ${unitWord(unit || 'раз', n)}`.trim();
 }
 
+/** Родительный падеж после «не больше»: 1 → «банки», 3 → «банок», 1,5 → «банки». */
+export function unitGen(unit, n) {
+  const u = String(unit ?? '').trim();
+  const forms = UNIT_FORMS[u.toLowerCase()];
+  if (!forms) return u;
+  const v = Number(n);
+  if (!Number.isInteger(v)) return forms[1];
+  const a = Math.abs(v);
+  return a % 10 === 1 && a % 100 !== 11 ? forms[1] : forms[2];
+}
+
+/** «не больше 1 банки», «не больше 3 раз». */
+export function limitText(limit, unit) {
+  return `не больше ${num(limit)} ${unitGen(unit || 'раз', limit)}`.trim();
+}
+
 /** «до 1 недели», «до 3 дней», «до полугода». */
 export function untilLabel(days) {
   const n = Math.floor(Number(days) || 0);
@@ -686,7 +702,7 @@ function limitCard(h, ctx) {
   const sv = savings(h, logs, ctx.now);
   const unit = h.unit || 'раз';
   const status = ls.over
-    ? `сверх лимита на ${fmtQty(ls.count - ls.limit, unit)} — завтра новый день`
+    ? `сверх лимита: +${fmtQty(ls.count - ls.limit, unit)} — завтра новый день`
     : ls.left > 0 ? `можно ещё ${fmtQty(ls.left, unit)}` : 'на сегодня всё — держись 💪';
   const hist = limitHistory(h, logs, ctx.t);
   const scale = Math.max(ls.limit * 1.5, ...hist.map(d => d.count), 1);
@@ -697,7 +713,7 @@ function limitCard(h, ctx) {
   if (sv.units > 0) saveParts.push(html`на ${fmtQty(sv.units, unit)} меньше, чем раньше`);
   return html`<article class="card hb-card hb-bad hb-limit lvl-${lvl} ${cur?.flash === h.id ? 'hb-flash' : ''}" data-card="${h.id}" style="${colorStyle(h)}">
     <div class="hb-top">
-      ${openBtn(h, html`<span>не больше ${fmtQty(ls.limit, unit)} в день</span>`)}
+      ${openBtn(h, html`<span>${limitText(ls.limit, unit)} в день</span>`)}
     </div>
     <div class="hb-lim">
       <div class="hb-lim-main">
@@ -772,7 +788,7 @@ function archiveHtml(list) {
 
 function kindLabel(h) {
   if (!isBad(h)) return `полезная · ${describeDays(h.days)}`;
-  return isLimit(h) ? `ограничиваю · не больше ${fmtQty(limitOf(h), h.unit || 'раз')} в день` : 'бросаю';
+  return isLimit(h) ? `ограничиваю · ${limitText(limitOf(h), h.unit)} в день` : 'бросаю';
 }
 
 // ---------------------------------------------------------------------------
@@ -1188,7 +1204,7 @@ function detailBody(h, shown = LOGS_PAGE) {
     const sk = streak(h, logs, t);
     const sv = savings(h, logs, now);
     const rate = completionRate(h, logs, from30, t);
-    desc = `Вредная · не больше ${fmtQty(limitOf(h), unit)} в день`;
+    desc = `Вредная · ${limitText(limitOf(h), unit)} в день`;
     sub = [`считаю с ${fmtDate(start)}`, Number(h.baseline) > 0 && `было ${fmtQty(h.baseline, unit)} в день`, isHm(h.reminder) && `спрошу в ${h.reminder}`].filter(Boolean).join(' · ');
     kpis = [
       kpi(html`${num(ls.count)}<small> из ${num(ls.limit)}</small>`, 'сегодня', `${limitLevel(ls.count, ls.limit) === 'ok' ? '' : limitLevel(ls.count, ls.limit)}`),
@@ -1433,7 +1449,7 @@ function calcHtml(fv) {
   const b = parseNum(fv.baseline), c = parseNum(fv.costPerUnit);
   if (!(b > 0)) return html`Укажи, сколько было в день, — посчитаем экономию.`;
   const unit = String(fv.unit || '').trim() || 'шт';
-  if (!(c > 0)) return html`Будем считать, сколько ${unitWord(unit, 5)} ты не потратил: ${fmtQty(b * 30, unit)} в месяц.`;
+  if (!(c > 0)) return html`Без цены посчитаем только количество: на <b>${fmtQty(b * 30, unit)}</b> меньше в месяц.`;
   return html`Экономия: <b>${fmtMoney(b * c)}</b> в день · <b>${fmtMoney(b * c * 30)}</b> в месяц · <b>${fmtMoney(b * c * 365)}</b> в год`;
 }
 
@@ -1650,7 +1666,9 @@ export default {
 };
 
 export const __test = {
-  unitWord, fmtQty, untilLabel, cleanParts, cleanText, milestoneInfo, describeDays, savedLabel, startOf, totals,
+  tick: () => tick(),
+  clockActive: () => !!(clock.timeout || clock.interval),
+  unitWord, unitGen, limitText, fmtQty, untilLabel, cleanParts, cleanText, milestoneInfo, describeDays, savedLabel, startOf, totals,
   weekStates, limitHistory, limitLevel, slipNote, pickTip, parseNum, heatmapMonths, formInit, applyTemplate,
   buildRecord, TIPS, TEMPLATES, TRIGGERS,
 };

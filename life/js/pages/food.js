@@ -167,10 +167,12 @@ function dedupeResults(items) {
   const seen = new Set();
   const out = [];
   for (const it of items) {
-    const key = it.id ? `id:${it.id}` : it.barcode ? `bc:${it.barcode}` : `n:${norm(it.name)}|${it.kcal}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    if (it.barcode) seen.add(`bc:${it.barcode}`);
+    const keys = [];
+    if (it.id) keys.push(`id:${it.id}`);
+    if (it.barcode) keys.push(`bc:${it.barcode}`);
+    if (!keys.length) keys.push(`n:${norm(it.name)}|${it.kcal}`);
+    if (keys.some(k => seen.has(k))) continue;
+    for (const k of keys) seen.add(k);
     out.push(it);
   }
   return out;

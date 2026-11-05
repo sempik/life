@@ -11,6 +11,9 @@
 .p-habits .hb-add-btn { height: 40px; padding: 0 14px 0 11px; }
 
 .p-habits .hb-seg > button { height: 36px; gap: 7px; }
+@media (pointer: coarse), (max-width: 899.98px) {
+  .p-habits .hb-seg > button { height: 40px; }
+}
 .p-habits .hb-seg-n {
   font-size: 12px;
   font-weight: 600;
@@ -343,7 +346,7 @@
 @media (min-width: 900px) {
   .sh-habit-form .hb-tpl-row { margin: 0 -24px; padding: 0 24px 2px; }
 }
-.sh-habit-form .hb-f-seg > button { height: 38px; font-size: 14.5px; }
+.sh-habit-form .hb-f-seg > button { height: 40px; font-size: 14.5px; }
 .sh-habit-form .hb-f-ident { display: flex; gap: 10px; align-items: stretch; }
 .sh-habit-form .hb-f-ident .input { flex: 1 1 auto; }
 .sh-habit-form .hb-f-emoji {
@@ -364,10 +367,10 @@
 .sh-habit-form .hb-f-pal { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .sh-habit-form .hb-f-emoji-in { width: 150px; height: 42px; font-size: 18px; }
 .sh-habit-form .hb-f-presets { margin-top: 8px; gap: 6px; }
-.sh-habit-form .hb-f-presets .chip { height: 36px; }
+.sh-habit-form .hb-f-presets .chip { height: 40px; }
 .sh-habit-form .days .chip.day { height: 42px; }
 .sh-habit-form .swatches { gap: 8px; }
-.sh-habit-form .swatch { width: 38px; height: 38px; }
+.sh-habit-form .swatch { width: 40px; height: 40px; }
 .sh-habit-form .hb-f-calc-wrap { margin-top: -6px; }
 .sh-habit-form .hb-f-calc {
   padding: 10px 12px;
