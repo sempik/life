@@ -1,1 +1,544 @@
-/* Стили страницы «food». Все селекторы — внутри .p-food */
+/* Стили страницы «food». Все селекторы — внутри .p-food (страница) и .sh-food (шторки раздела). */
+
+/* ===================================================================== */
+/* Страница                                                              */
+/* ===================================================================== */
+
+.p-food { container-type: inline-size; }
+.p-food.is-re { animation: none; }
+
+.p-food .fd-head h1 { flex: 1 1 auto; }
+.p-food .fd-add { padding: 0 16px 0 12px; }
+@media (max-width: 899.98px) {
+  .p-food .fd-add { height: 40px; font-size: 14.5px; }
+}
+
+/* Выбор дня */
+.p-food .fd-datebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -4px;
+}
+.p-food .fd-date { position: relative; min-width: 0; flex: 0 1 auto; }
+.p-food .fd-date-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: 2px 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.p-food .fd-date-btn:hover { background: var(--surface-2); }
+.p-food .fd-date-main { font-size: 17px; font-weight: 600; line-height: 1.2; white-space: nowrap; }
+.p-food .fd-date-sub { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.p-food .fd-date-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  border: 0;
+  padding: 0;
+  font-size: 16px;
+  pointer-events: none;
+}
+/* На телефоне нативный выбор даты открывается прямо касанием поля. */
+@media (pointer: coarse) {
+  .p-food .fd-date-input { pointer-events: auto; cursor: pointer; }
+}
+.p-food .fd-today { margin-left: auto; height: 40px; }
+
+/* Колонки: телефон — одна колонка (порядок карточек ниже), широкий экран — две */
+.p-food .fd-cols { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.p-food .fd-col { display: contents; }
+.p-food .fd-summary { order: 1; }
+.p-food .fd-water { order: 2; }
+.p-food .fd-diary { order: 3; }
+.p-food .fd-week { order: 4; }
+.p-food .fd-weight { order: 5; }
+
+@container (min-width: 720px) {
+  .p-food .fd-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+  .p-food .fd-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+}
+
+/* ---- Калории */
+.p-food .fd-sum-top { display: flex; align-items: center; gap: 18px; }
+.p-food .fd-sum-top .ring-label { font-size: 27px; }
+.p-food .fd-sum-top .ring-sub { font-size: 12.5px; }
+.p-food .fd-sum-side { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.p-food .fd-left-label { font-size: 13px; color: var(--muted); font-weight: 500; }
+.p-food .fd-left-label.text-warn { color: var(--warn); }
+.p-food .fd-left-num {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.p-food .fd-left-num small { font-size: 15px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.p-food .fd-left-num.text-warn { color: var(--warn); }
+.p-food .fd-left-goal { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.p-food .fd-sum-side .btn { margin-top: 8px; }
+.p-food .fd-goals-btn { margin-right: -6px; color: var(--muted); }
+.p-food .fd-goals-btn:hover { color: var(--text); }
+
+.p-food .fd-macros {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.p-food .fd-macro { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.p-food .fd-macro-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.p-food .fd-macro-name { font-size: 13px; color: var(--muted); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-food .fd-macro-name::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--mc);
+  vertical-align: 1px;
+}
+.p-food .fd-macro-val { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.p-food .fd-macro-val b { font-size: 16px; font-weight: 600; color: var(--text); }
+.p-food .fd-macro .progress { height: 6px; }
+
+/* ---- Вода */
+.p-food .fd-water-total { font-size: 13.5px; color: var(--muted); white-space: nowrap; }
+.p-food .fd-water-total b { font-size: 17px; font-weight: 600; color: var(--text); }
+.p-food .fd-glasses {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+}
+.p-food .fd-glass {
+  position: relative;
+  flex: 1 1 0;
+  max-width: 30px;
+  aspect-ratio: 3 / 4;
+  clip-path: polygon(0 0, 100% 0, 86% 100%, 14% 100%);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.p-food .fd-glass > i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--f, 0) * 100%);
+  background: var(--info);
+  transition: height 0.4s var(--ease);
+}
+.p-food .fd-water-note { margin-top: 10px; color: var(--muted); }
+.p-food .fd-water-note .text-ok { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
+.p-food .fd-water-btns {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+.p-food .fd-wbtn { padding: 0 6px; gap: 3px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.p-food .fd-wbtn small { font-size: 12px; font-weight: 500; color: var(--muted); }
+.p-food .fd-wlog { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.p-food .fd-wchip {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding-left: 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.p-food .fd-wchip-x {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.p-food .fd-wchip-x:hover { color: var(--bad); background: var(--bad-soft); }
+.p-food .fd-wmore {
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.p-food .fd-wmore:hover { color: var(--text); background: var(--surface-2); }
+
+/* ---- Дневник */
+.p-food .fd-diary { padding-bottom: 8px; }
+.p-food .fd-diary > .card-head { margin-bottom: 4px; }
+.p-food .fd-meal { padding: 8px 0; }
+.p-food .fd-meal + .fd-meal { border-top: 1px solid var(--line); }
+.p-food .fd-meal-head { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.p-food .fd-meal-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.p-food .fd-meal-name { font-size: 16px; font-weight: 600; }
+.p-food .fd-meal-macros { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.p-food .fd-meal-kcal { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.p-food .fd-meal-kcal b { font-size: 16px; font-weight: 600; color: var(--text); }
+.p-food .fd-meal-add { color: var(--muted); }
+.p-food .fd-meal-add:hover { color: var(--text); }
+.p-food .fd-items { margin-top: 2px; }
+.p-food .fd-item { min-height: 54px; padding: 8px 0; }
+.p-food .fd-item .item-sub { font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.p-food .fd-item-kcal { color: var(--muted); font-size: 13px; }
+.p-food .fd-item-kcal b { color: var(--text); font-size: 15px; font-weight: 600; }
+.p-food .fd-meal-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 4px;
+  padding: 0 14px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.p-food .fd-meal-empty:hover { background: var(--surface-2); color: var(--text); border-color: var(--muted); }
+
+/* ---- Неделя */
+.p-food .fd-chart { width: 100%; height: auto; max-height: 190px; overflow: visible; }
+.p-food .fd-axis { stroke: var(--line-2); stroke-width: 1; }
+.p-food .fd-goal { stroke: var(--text-2); stroke-width: 1.25; stroke-dasharray: 4 4; opacity: 0.7; pointer-events: none; }
+.p-food .fd-bar { cursor: pointer; outline: none; }
+.p-food .fd-hit { fill: transparent; transition: fill 0.15s; }
+.p-food .fd-bar:hover .fd-hit { fill: var(--surface-2); }
+.p-food .fd-bar:focus-visible .fd-hit { fill: var(--surface-2); stroke: var(--accent); stroke-width: 2; }
+.p-food .fd-bar-rect { fill: var(--accent); opacity: 0.55; transition: opacity 0.15s; }
+.p-food .fd-bar.over .fd-bar-rect { fill: var(--warn); }
+.p-food .fd-bar.none .fd-bar-rect { fill: var(--surface-3); opacity: 1; }
+.p-food .fd-bar.sel .fd-bar-rect { opacity: 1; }
+.p-food .fd-bar:hover .fd-bar-rect { opacity: 0.9; }
+.p-food .fd-val {
+  fill: var(--muted);
+  font: 500 10px var(--font);
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.p-food .fd-chart-empty { fill: var(--muted); font: 500 12.5px var(--font); }
+.p-food .fd-bar.sel .fd-val { fill: var(--text); font-weight: 600; }
+.p-food .fd-dow { fill: var(--muted); font: 500 11.5px var(--font); }
+.p-food .fd-bar.today .fd-dow { fill: var(--text-2); }
+.p-food .fd-bar.sel .fd-dow { fill: var(--text); font-weight: 700; }
+.p-food .fd-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.p-food .fd-legend-goal { display: inline-block; width: 16px; border-top: 1.5px dashed var(--text-2); opacity: 0.8; }
+.p-food .fd-legend-over { display: inline-block; width: 9px; height: 9px; margin-left: 10px; border-radius: 3px; background: var(--warn); }
+
+/* ---- Вес */
+.p-food .fd-weight .card-head .actions { gap: 2px; }
+.p-food .fd-weight-top { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px 16px; }
+.p-food .fd-weight-top .kpi-value { font-size: 30px; }
+.p-food .fd-deltas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.p-food .fd-deltas .badge { height: 26px; padding: 0 10px; font-size: 12.5px; }
+.p-food .fd-spark { width: 100%; height: auto; max-height: 90px; margin-top: 14px; overflow: visible; }
+.p-food .fd-spark-area { fill: var(--accent-soft); stroke: none; }
+.p-food .fd-spark-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.p-food .fd-spark-dot { fill: var(--accent); stroke: var(--surface); stroke-width: 2.5; }
+.p-food .fd-spark-axis { display: flex; justify-content: space-between; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.p-food .fd-weight-empty { line-height: 1.5; }
+
+/* ===================================================================== */
+/* Шторки раздела                                                        */
+/* ===================================================================== */
+
+/* Ручная форма записи и продукта: БЖУ — три поля в ряд */
+.sh-food-meal .form, .sh-food-prod .form, .sh-food-quick .form { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.sh-food-meal .form > .field, .sh-food-prod .form > .field, .sh-food-quick .form > .field { grid-column: span 3; }
+.sh-food-meal .form > .field.full, .sh-food-prod .form > .field.full, .sh-food-quick .form > .field.full,
+.sh-food-meal .form > .form-error, .sh-food-prod .form > .form-error, .sh-food-quick .form > .form-error { grid-column: 1 / -1; }
+.sh-food-meal .form > .field[data-name="p"], .sh-food-meal .form > .field[data-name="f"], .sh-food-meal .form > .field[data-name="c"],
+.sh-food-prod .form > .field[data-name="p"], .sh-food-prod .form > .field[data-name="f"], .sh-food-prod .form > .field[data-name="c"],
+.sh-food-quick .form > .field[data-name="p"], .sh-food-quick .form > .field[data-name="f"], .sh-food-quick .form > .field[data-name="c"] { grid-column: span 2; }
+.sh-food-quick .form > .field[data-name="time"] { grid-column: span 3; }
+.sh-food .form-intro:has(.fd-intro-search) { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.sh-food .fd-intro-search { height: 40px; }
+
+/* Цели: превью расчёта */
+.sh-food-goals .fd-goal-preview:empty { display: none; }
+.sh-food-goals .fd-goal-preview:has(.fd-gp-main) {
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sh-food-goals .fd-gp-title { font-size: 13px; color: var(--muted); font-weight: 500; }
+.sh-food-goals .fd-gp-main { font-size: 15px; color: var(--muted); }
+.sh-food-goals .fd-gp-main b { font-size: 28px; font-weight: 600; color: var(--text); letter-spacing: -0.02em; margin-right: 4px; }
+.sh-food-goals .fd-gp-row { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; color: var(--text-2); }
+.sh-food-goals .fd-gp-row > span { display: inline-flex; align-items: center; gap: 6px; }
+.sh-food-goals .fd-gp-row i { width: 8px; height: 8px; border-radius: 50%; background: var(--mc); }
+.sh-food-goals .fd-gp-water .ico { color: var(--info); }
+
+/* История веса */
+.sh-food-hist .fd-hist .item { padding-left: 4px; padding-right: 4px; }
+.sh-food-hist .fd-hist-kg { color: var(--text); font-size: 15px; font-weight: 600; min-width: 72px; text-align: right; }
+
+/* ---- Поиск продукта */
+.sh-fs .sheet-body { padding-top: 0; }
+@media (min-width: 900px) {
+  .sheet.sh-fs { height: min(86%, 760px); }
+}
+@media (max-width: 899.98px) {
+  .sheet.sh-fs { height: 92%; }
+}
+.sh-fs .fs-top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0 -20px;
+  padding: 4px 20px 12px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+@media (min-width: 900px) {
+  .sh-fs .fs-top { margin: 0 -24px; padding: 6px 24px 12px; }
+}
+.sh-fs .fs-search .input { padding-right: 46px; }
+.sh-fs .fs-search .input::-webkit-search-cancel-button { display: none; }
+.sh-fs .fs-clear {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  color: var(--muted);
+}
+.sh-fs .fs-clear:active { transform: translateY(-50%) scale(0.94); }
+.sh-fs .fs-tools {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -20px;
+  padding: 0 20px;
+}
+.sh-fs .fs-tools::-webkit-scrollbar { display: none; }
+.sh-fs .fs-tools .chip { height: 40px; color: var(--text-2); }
+@media (min-width: 900px) {
+  .sh-fs .fs-tools { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
+}
+.sh-fs .fs-results { display: flex; flex-direction: column; gap: 12px; padding-top: 2px; min-height: 120px; }
+.sh-fs .fs-tabs { margin-bottom: 2px; }
+.sh-fs .fs-tabs > button { height: 36px; }
+
+.sh-fs .fs-list { display: flex; flex-direction: column; }
+.sh-fs .fs-row { display: flex; align-items: center; gap: 2px; min-width: 0; border-radius: var(--radius-sm); }
+.sh-fs .fs-row + .fs-row { border-top: 1px solid var(--line); }
+.sh-fs .fs-pick {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 8px 8px 8px 4px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+@media (hover: hover) {
+  .sh-fs .fs-pick:hover { background: var(--surface-2); }
+}
+.sh-fs .fs-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sh-fs .fs-row-title { font-weight: 500; overflow-wrap: anywhere; line-height: 1.3; }
+.sh-fs .fs-row-sub { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.sh-fs .fs-row-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+.sh-fs .fs-row-side b { font-size: 15px; font-weight: 600; }
+.sh-fs .fs-row-side small { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.sh-fs .fs-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  vertical-align: 2px;
+}
+.sh-food .fs-star { color: var(--muted); }
+.sh-food .fs-star.on { color: var(--warn); }
+.sh-food .fs-star.on .ico path { fill: currentColor; }
+.sh-fs .fs-edit { color: var(--muted); }
+.sh-fs .fs-edit:hover, .sh-food .fs-star:hover { color: var(--text); }
+.sh-food .fs-star.on:hover { color: var(--warn); }
+
+.sh-fs .fs-quickline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.sh-fs .fs-quickline .ico { color: var(--warn); flex: none; }
+.sh-fs .fs-quickline:hover { background: var(--surface-3); }
+
+.sh-fs .fs-empty {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+}
+.sh-fs .fs-empty > .ico { flex: none; color: var(--muted); margin-top: 1px; }
+.sh-fs .fs-empty b { font-weight: 600; overflow-wrap: anywhere; }
+.sh-fs .fs-empty .small { margin-top: 3px; line-height: 1.4; }
+.sh-food .fs-alt { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sh-food .fs-alt .btn { padding: 0 10px; }
+
+.sh-fs .fs-online { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+.sh-fs .fs-online-btn { justify-content: center; }
+.sh-fs .fs-online-btn span { overflow: hidden; text-overflow: ellipsis; }
+.sh-fs .fs-online-hint { text-align: center; }
+.sh-fs .fs-sec {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 4px 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sh-fs .fs-sec .muted { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.sh-food .fs-loading { display: flex; align-items: center; gap: 10px; padding: 12px 4px; color: var(--muted); font-size: 14px; }
+.sh-food .fs-spinner {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--line-2);
+  border-top-color: var(--text);
+  animation: spin 0.8s linear infinite;
+}
+.sh-fs .fs-off-error { align-items: center; }
+.sh-fs .fs-off-none { padding: 4px; }
+
+/* Порция */
+.sh-fs .fs-portion, .sh-fs .fs-scan { display: flex; flex-direction: column; gap: 16px; padding-top: 4px; }
+.sh-food .fs-back { align-self: flex-start; margin-left: -8px; color: var(--muted); }
+.sh-food .fs-back:hover { color: var(--text); }
+.sh-fs .fs-prod { display: flex; align-items: flex-start; gap: 12px; }
+.sh-fs .fs-prod-main { flex: 1; min-width: 0; }
+.sh-fs .fs-prod-name { font-size: 20px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.sh-fs .fs-prod-sub { margin-top: 3px; font-size: 13.5px; color: var(--muted); }
+.sh-fs .fs-amount { display: flex; flex-direction: column; gap: 8px; }
+.sh-fs .fs-amount-row { display: flex; align-items: center; gap: 8px; }
+.sh-fs .fs-amount-row .icon-btn { width: 46px; height: 46px; border-radius: var(--radius-sm); }
+.sh-fs .fs-amount-row .field-control { flex: 1; }
+.sh-fs .fs-grams { font-size: 20px; font-weight: 600; text-align: center; padding: 0 44px; height: 50px; }
+.sh-fs .fs-amount.invalid .fs-grams { border-color: var(--bad); }
+.sh-fs .fs-qchips { gap: 6px; }
+.sh-fs .fs-qchips .chip { height: 36px; font-variant-numeric: tabular-nums; }
+.sh-fs .fs-preview {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+.sh-fs .fs-pv-kcal { display: flex; align-items: baseline; gap: 6px; }
+.sh-fs .fs-pv-kcal b { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
+.sh-fs .fs-pv-kcal span { color: var(--muted); font-size: 14px; }
+.sh-fs .fs-pv-macros { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-left: auto; }
+.sh-fs .fs-pv-m { display: inline-flex; align-items: baseline; gap: 4px; font-size: 13px; color: var(--muted); }
+.sh-fs .fs-pv-m i { align-self: center; width: 7px; height: 7px; border-radius: 50%; background: var(--mc); }
+.sh-fs .fs-pv-m b { color: var(--text); font-size: 15px; font-weight: 600; }
+.sh-fs .fs-when { display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: 12px; align-items: end; }
+.sh-fs .fs-meal-seg { height: 46px; padding: 4px; }
+.sh-fs .fs-meal-seg > button { height: 36px; padding: 0 6px; min-width: 0; flex: 1 1 0; }
+.sh-fs .fs-date-note { display: flex; align-items: center; gap: 6px; }
+@media (max-width: 520px) {
+  .sh-fs .fs-when { grid-template-columns: minmax(0, 1fr); }
+  .sh-fs .fs-time-field { max-width: 160px; }
+  .sh-fs .fs-pv-macros { margin-left: 0; }
+}
+
+/* Штрихкод */
+.sh-fs .fs-video-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: #000;
+  aspect-ratio: 4 / 3;
+  max-height: 46vh;
+}
+.sh-fs .fs-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sh-fs .fs-frame { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.sh-fs .fs-frame > i {
+  width: 72%;
+  height: 34%;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 14px;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.35);
+}
+.sh-fs .fs-scan-status { text-align: center; margin-top: -6px; }
+.sh-fs .fs-code-form { display: flex; flex-direction: column; gap: 6px; }
+.sh-fs .fs-code-form .input-group .btn { flex: none; height: 46px; }
+.sh-fs .fs-scan-result { display: flex; flex-direction: column; gap: 10px; }
+.sh-fs .fs-scan-result:empty { display: none; }
