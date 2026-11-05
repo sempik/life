@@ -205,7 +205,7 @@ export function tzOffsetLabel(tz, atMs = Date.now()) {
     const v = parts.find(p => p.type === 'timeZoneName')?.value || '';
     const m = /^(?:GMT|UTC)(?:([+-])(\d{1,2})(?::?(\d{2}))?)?$/.exec(v);
     if (m) {
-      if (!m[1]) out = 'UTC';
+      if (!m[1] || (Number(m[2]) === 0 && !Number(m[3] || 0))) out = 'UTC';
       else out = `UTC${m[1] === '-' ? '−' : '+'}${Number(m[2])}${m[3] && m[3] !== '00' ? `:${m[3]}` : ''}`;
     }
   } catch { /* неизвестный пояс */ }
@@ -543,7 +543,7 @@ function cardProfile(s) {
 function cardTheme(s) {
   const theme = THEMES.some(t => t.v === s.theme) ? s.theme : 'dark';
   return card('Оформление', 'sun', html`<div class="seg block st-seg" role="radiogroup" aria-label="Тема">
-    ${THEMES.map(t => html`<button type="button" role="radio" aria-checked="${t.v === theme}" class="${t.v === theme ? 'on' : ''}" data-act="theme" data-v="${t.v}">${icon(t.icon, 16)}<span>${t.label}</span></button>`)}
+    ${THEMES.map(t => html`<button type="button" role="radio" aria-checked="${String(t.v === theme)}" class="${t.v === theme ? 'on' : ''}" data-act="theme" data-v="${t.v}">${icon(t.icon, 16)}<span>${t.label}</span></button>`)}
   </div>`);
 }
 
@@ -711,7 +711,7 @@ function cardLeads(s) {
           <div class="chips st-chips" role="group" aria-label="${t.label}: за сколько напоминать">
             ${LEADS.map(m => {
               const on = list.includes(m);
-              return html`<button type="button" class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-act="lead" data-type="${t.id}" data-min="${m}">${fmtLead(m)}</button>`;
+              return html`<button type="button" class="chip ${on ? 'on' : ''}" aria-pressed="${String(on)}" data-act="lead" data-type="${t.id}" data-min="${m}">${fmtLead(m)}</button>`;
             })}
           </div>
         </div>`;
@@ -1319,7 +1319,7 @@ function renderInto(root, params = {}) {
   root.innerHTML = html`<div class="page p-settings" data-tab="${tab}">
     <div class="page-head"><h1>Настройки</h1></div>
     <nav class="tabs st-tabs" role="tablist" aria-label="Разделы настроек">
-      ${TABS.map(t => html`<button type="button" role="tab" id="st-tab-${t.id}" class="${t.id === tab ? 'on' : ''}" aria-selected="${t.id === tab}" aria-controls="st-panel" tabindex="${t.id === tab ? '0' : '-1'}" data-act="tab" data-tab="${t.id}">${icon(t.icon, 18)}<span>${t.label}</span></button>`)}
+      ${TABS.map(t => html`<button type="button" role="tab" id="st-tab-${t.id}" class="${t.id === tab ? 'on' : ''}" aria-selected="${String(t.id === tab)}" aria-controls="st-panel" tabindex="${t.id === tab ? '0' : '-1'}" data-act="tab" data-tab="${t.id}">${icon(t.icon, 18)}<span>${t.label}</span></button>`)}
     </nav>
     <div class="st-body" id="st-panel" role="tabpanel" aria-labelledby="st-tab-${tab}">${body}</div>
   </div>`;
@@ -1549,12 +1549,13 @@ const ACTIONS = {
     }
   },
   'notify-test': async () => {
+    const before = notifyMod.permission();
     setBusy('test', true);
     try {
       const err = await notifyMod.test();
       toast(err || 'Отправил тестовое уведомление', { kind: err ? 'bad' : 'ok', ms: err ? 5000 : 2600 });
     } finally {
-      ui.push = null;
+      if (notifyMod.permission() !== before) ui.push = null; // разрешение спросили — статус push мог измениться
       setBusy('test', false);
     }
   },
@@ -2117,7 +2118,7 @@ export function openOnboarding() {
       <p class="ob-text">Включи нужное — остальное не будет мешать. Поменять можно в любой момент.</p>
       <div class="ob-tiles">${MODULES.map(m => {
         const on = st.modules[m.id];
-        return html`<button type="button" class="ob-tile ${on ? 'on' : ''}" aria-pressed="${on}" data-ob="mod" data-m="${m.id}">
+        return html`<button type="button" class="ob-tile ${on ? 'on' : ''}" aria-pressed="${String(on)}" data-ob="mod" data-m="${m.id}">
           <span class="ob-tile-ico">${icon(m.icon, 22)}</span>
           <span class="ob-tile-t">${m.label}</span><span class="ob-tile-s">${m.sub}</span>
           <span class="ob-tick" aria-hidden="true">${icon('check', 14)}</span>
@@ -2128,8 +2129,8 @@ export function openOnboarding() {
       return html`<h2 class="ob-title" id="ob-title">Учишься?</h2>
         <p class="ob-text">Тогда настрою пары: время звонков и недели числитель/знаменатель.</p>
         <div class="seg block ob-seg" role="radiogroup" aria-label="Учишься?">
-          <button type="button" role="radio" aria-checked="${st.study === true}" class="${st.study === true ? 'on' : ''}" data-ob="study" data-v="1">${icon('book', 16)}<span>Да, учусь</span></button>
-          <button type="button" role="radio" aria-checked="${st.study === false}" class="${st.study === false ? 'on' : ''}" data-ob="study" data-v="0"><span>Нет</span></button>
+          <button type="button" role="radio" aria-checked="${String(st.study === true)}" class="${st.study === true ? 'on' : ''}" data-ob="study" data-v="1">${icon('book', 16)}<span>Да, учусь</span></button>
+          <button type="button" role="radio" aria-checked="${String(st.study === false)}" class="${st.study === false ? 'on' : ''}" data-ob="study" data-v="0"><span>Нет</span></button>
         </div>
         ${st.study ? html`<div class="field ob-field">
           <label class="field-label" for="ob-sem">Начало семестра</label>
@@ -2158,7 +2159,7 @@ export function openOnboarding() {
         ${[
           { v: 'demo', ic: 'sparkles', t: 'С примера', d: 'Заполню неделю: пары, задачи, еда, вода и привычки' },
           { v: 'empty', ic: 'edit', t: 'С чистого листа', d: 'Пусто — добавляй своё' },
-        ].map(c => html`<button type="button" role="radio" class="ob-choice ${st.start === c.v ? 'on' : ''}" aria-checked="${st.start === c.v}" data-ob="start" data-v="${c.v}">
+        ].map(c => html`<button type="button" role="radio" class="ob-choice ${st.start === c.v ? 'on' : ''}" aria-checked="${String(st.start === c.v)}" data-ob="start" data-v="${c.v}">
           <span class="ob-tile-ico">${icon(c.ic, 22)}</span>
           <span class="ob-choice-main"><span class="ob-tile-t">${c.t}</span><span class="ob-tile-s">${c.d}</span></span>
           <span class="ob-tick" aria-hidden="true">${icon('check', 14)}</span>

@@ -356,6 +356,7 @@ async function checkGeneral(h) {
   assert(h, pairs[0][0] === '08:30' && pairs[0][1] === '10:30', `начало 1-й пары: ${JSON.stringify(pairs[0])}`);
   await h.page.fill('input[data-pair="1"][data-edge="1"]', '10:00');
   await h.page.locator('input[data-pair="1"][data-edge="1"]').blur();
+  await h.settle(250);
   await expectToast(h, /позже, чем начинается/, 'конец пары раньше начала');
   pairs = (await settings(h)).pairTimes;
   assert(h, pairs[1][1] === '12:10', `неверный конец пары сохранился: ${JSON.stringify(pairs[1])}`);
@@ -440,6 +441,7 @@ async function checkNotify(h) {
   }
 
   // Push без синхронизации → кнопка ведёт на вкладку синхронизации
+  await waitFor(h, () => !document.querySelector('.st-push')?.textContent.includes('Проверяю'), null, 'статус push');
   const toSync = h.page.locator('.st-push [data-act=tab][data-tab=sync]');
   if (await toSync.count()) {
     await toSync.click();
