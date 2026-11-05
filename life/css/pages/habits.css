@@ -310,6 +310,7 @@
   .sh-habit .sheet-foot .hb-d-del { width: 46px; padding: 0; }
   .sh-habit .sheet-foot .hb-d-del span { display: none; }
 }
+.sh-habit .hb-d-note { font-size: 13px; color: var(--muted); }
 .sh-habit .hb-d-empty { padding: 18px; border: 1px dashed var(--line-2); border-radius: 14px; text-align: center; color: var(--muted); font-size: 14px; }
 
 /* Тепловая карта: подписи дней в той же сетке, ячейки тянутся по ширине */

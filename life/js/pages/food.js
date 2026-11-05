@@ -375,7 +375,7 @@ function waterHtml(date, t, ml, goals) {
     </div>
     ${note ? html`<div class="fd-water-note small">${note}</div>` : ''}
     <div class="fd-water-btns">
-      ${WATER_STEPS.map(v => html`<button type="button" class="btn fd-wbtn" data-act="water" data-ml="${v}" aria-label="Добавить ${v} мл воды">+${v}<small>мл</small></button>`)}
+      ${WATER_STEPS.map(v => html`<button type="button" class="btn fd-wbtn" data-act="water" data-ml="${v}" aria-label="Добавить ${v} мл воды">+${v}<small class="fd-wbtn-unit">мл</small></button>`)}
       <button type="button" class="btn fd-wbtn" data-act="water-custom" aria-label="Свой объём воды">${icon('edit', 16)}<small>свой</small></button>
     </div>
     ${entries.length ? html`<div class="fd-wlog" aria-label="Записи воды">
@@ -455,7 +455,7 @@ function weekHtml(date, t, goals) {
       })}
       ${filled.length ? '' : html`<text class="fd-chart-empty" x="${m.W / 2}" y="${round(m.base / 2 + 12, 1)}" text-anchor="middle">Записей за эти дни нет</text>`}
     </svg>
-    ${goal && filled.length ? html`<div class="fd-legend small muted"><span class="fd-legend-goal"></span>цель ${fmtNum(goal)} ккал<span class="fd-legend-over"></span>перебор больше 10%</div>` : ''}
+    ${goal && filled.length ? html`<div class="fd-legend small muted"><span class="fd-li"><i class="fd-legend-goal"></i>цель ${fmtNum(goal)} ккал</span><span class="fd-li"><i class="fd-legend-over"></i>перебор больше 10%</span></div>` : ''}
   </section>`;
 }
 

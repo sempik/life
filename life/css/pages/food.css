@@ -160,6 +160,10 @@
 }
 .p-food .fd-wbtn { padding: 0 6px; gap: 3px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .p-food .fd-wbtn small { font-size: 12px; font-weight: 500; color: var(--muted); }
+.p-food .fd-water { container-type: inline-size; }
+@container (max-width: 300px) {
+  .p-food .fd-wbtn-unit { display: none; }
+}
 .p-food .fd-wlog { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .p-food .fd-wchip {
   display: inline-flex;
@@ -262,9 +266,10 @@
 .p-food .fd-dow { fill: var(--muted); font: 500 11.5px var(--font); }
 .p-food .fd-bar.today .fd-dow { fill: var(--text-2); }
 .p-food .fd-bar.sel .fd-dow { fill: var(--text); font-weight: 700; }
-.p-food .fd-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.p-food .fd-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; }
+.p-food .fd-li { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .p-food .fd-legend-goal { display: inline-block; width: 16px; border-top: 1.5px dashed var(--text-2); opacity: 0.8; }
-.p-food .fd-legend-over { display: inline-block; width: 9px; height: 9px; margin-left: 10px; border-radius: 3px; background: var(--warn); }
+.p-food .fd-legend-over { display: inline-block; width: 9px; height: 9px; border-radius: 3px; background: var(--warn); }
 
 /* ---- Вес */
 .p-food .fd-weight .card-head .actions { gap: 2px; }

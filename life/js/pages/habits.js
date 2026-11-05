@@ -1136,11 +1136,13 @@ function refreshDetail(d) {
   if (!h) { d.silent = false; d.close(); return; }
   const body = d.el.querySelector('.sheet-body');
   const top = body.scrollTop;
+  const focus = rememberFocus(d.el);
   d.el.querySelector('.sheet-title').textContent = h.name || 'Привычка';
   body.innerHTML = String(detailBody(h, d.shown));
   body.scrollTop = top;
   const foot = d.el.querySelector('.sheet-foot');
   if (foot) foot.innerHTML = String(detailFooter(h));
+  restoreFocus(d.el, focus);
 }
 
 function onDetailClick(e, d) {
@@ -1186,7 +1188,7 @@ function detailBody(h, shown = LOGS_PAGE) {
   const from30 = [addDays(t, -29), start].sort().pop();
   const unit = h.unit || (isBad(h) ? 'шт' : 'раз');
 
-  let desc, sub, kpis;
+  let desc, sub, kpis, note = '';
   if (!isBad(h)) {
     const sk = streak(h, logs, t);
     const p = dayProgress(h, logs, t);
@@ -1213,6 +1215,11 @@ function detailBody(h, shown = LOGS_PAGE) {
       kpi(sv.money > 0 ? fmtMoney(sv.money) : sv.units > 0 ? fmtQty(sv.units, unit) : '—', sv.money > 0 ? 'сэкономлено' : savedLabel(h)),
       kpi(kv(num(tt.cravings), plural(tt.cravings, TIMES_FORMS)), `удержался${tt.slips ? ` · срывов ${num(tt.slips)}` : ''}`),
     ];
+    const span = rangeDays(from30, t).filter(d => isScheduled(h, d)).length;
+    if (span) {
+      const clean = Math.round(completionRate(h, logs, from30, t) * span);
+      note = `За ${pluralN(span, DAY_FORMS)} без срывов — ${clean} (${Math.round((clean / span) * 100)}%)`;
+    }
   } else {
     const ls = limitStatus(h, logs, t);
     const sk = streak(h, logs, t);
@@ -1242,6 +1249,7 @@ function detailBody(h, shown = LOGS_PAGE) {
     <section class="hb-d-sec">
       <div class="hb-d-sec-h"><h3>12 недель</h3>${legendHtml(h)}</div>
       ${heatmapHtml(h, logs, t)}
+      ${note ? html`<div class="hb-d-note">${note}</div>` : ''}
     </section>
     <section class="hb-d-sec">
       <div class="hb-d-sec-h"><h3>История</h3>${sorted.length ? html`<span class="muted small">${pluralN(sorted.length, ['запись', 'записи', 'записей'])}</span>` : ''}</div>

@@ -710,10 +710,12 @@ async function checkDemo(h) {
       slipCells: el.querySelectorAll('.hm-cell.slip').length,
       logs: el.querySelectorAll('.hb-log').length,
       more: !!el.querySelector('[data-act="d-more"]'),
+      note: el.querySelector('.hb-d-note')?.textContent.trim() || '',
     }));
     if (id === 'demo_hb_smoking') {
       expect(h, /без срывов/.test(d.kpis[0]) && /^6 д/.test(d.kpis[0]), `бросаю: KPI ${d.kpis}`);
       expect(h, d.logs === 4, `бросаю: записей ${d.logs}`);
+      expect(h, /^За 7 дней без срывов — 7 \(100%\)$/.test(d.note), `бросаю: за 30 дней «${d.note}»`);
     } else {
       expect(h, d.slipCells >= 2, `ограничиваю: дней с перебором ${d.slipCells}`);
       expect(h, d.logs === 13 && !d.more, `ограничиваю: журнал ${d.logs}, «ещё» ${d.more}`);
