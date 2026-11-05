@@ -445,3 +445,6 @@
 .sh-onboarding .ob-choice .ob-tile-ico { margin-bottom: 0; }
 .sh-onboarding .ob-choice-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .sh-onboarding .ob-choice .ob-tick { top: 50%; margin-top: -11px; }
+@media (max-width: 899.98px) {
+  .sheet.sh-settings .sheet-foot .btn.primary { flex: 1 1 auto; }
+}

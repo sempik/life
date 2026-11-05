@@ -1307,6 +1307,7 @@ function renderInto(root, params = {}) {
 
   const active = document.activeElement;
   const fkey = active && root.contains(active) ? focusKey(active) : '';
+  const navScroll = prevTab === tab ? root.querySelector('.st-tabs')?.scrollLeft || 0 : 0;
   const s = store.settings;
   let body;
   try {
@@ -1325,7 +1326,9 @@ function renderInto(root, params = {}) {
   </div>`;
 
   bind(root);
+  // Полоса вкладок прокручивается вбок (телефон): та же вкладка — та же прокрутка, новая — по центру.
   if (prevTab !== tab) scrollTabIntoView(root);
+  else if (navScroll) root.querySelector('.st-tabs').scrollLeft = navScroll;
   if (fkey) {
     const el = root.querySelector(fkey);
     if (el) try { el.focus({ preventScroll: true }); } catch { /* ignore */ }
@@ -2295,6 +2298,12 @@ export default {
   nav: false,
   render(root, params) {
     renderInto(root, params || {});
+  },
+  /** Записи коллекций нужны только «Уведомлениям» (ближайшие) и «Данным» (счётчики, демо). */
+  shouldRerender(colls) {
+    const tab = cur?.tab || 'general';
+    if (tab === 'notify' || tab === 'data') return true;
+    return colls.has('settings') || colls.has('local');
   },
   destroy() {
     clearInterval(tickTimer);
