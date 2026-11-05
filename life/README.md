@@ -72,10 +72,10 @@
 Включение (один раз, нужна синхронизация из п. 3):
 
 1. **Секрет** `LIFE_GIST_TOKEN` = тот же токен:
-   https://github.com/sempik/sempik.github.io/settings/secrets/actions/new
+   https://github.com/sempik/life/settings/secrets/actions/new
 2. Если задан пароль шифрования — секрет `LIFE_PASSPHRASE` с этим паролем.
 3. **Переменная** `LIFE_BOT` = `on`:
-   https://github.com/sempik/sempik.github.io/settings/variables/actions/new
+   https://github.com/sempik/life/settings/variables/actions/new
 4. Запусти вручную первый раз: вкладка **Actions → life-bot → Run workflow**.
 5. Push: в Life **Настройки → Уведомления → «Подписать это устройство»** (на каждом устройстве).
 6. Telegram: создай бота у [@BotFather](https://t.me/BotFather), в Life **Настройки → Бот**

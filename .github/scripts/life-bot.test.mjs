@@ -469,7 +469,7 @@ test('источник ICS: изменение между запусками →
   const world = await makeWorld({ files: { 'life-data.json': data, 'life-config.json': tgConfig() }, sites });
 
   const t1 = msk(12);
-  const r1 = await run(world, t1, { env: { GITHUB_REPOSITORY: 'sempik/sempik.github.io' } });
+  const r1 = await run(world, t1, { env: { GITHUB_REPOSITORY: 'sempik/life' } });
   assert.equal(r1.summary.sourcesChecked, 1);
   assert.equal(r1.summary.changes, 0, 'первый снимок — точка отсчёта');
   let bot = await world.file('life-bot.json');

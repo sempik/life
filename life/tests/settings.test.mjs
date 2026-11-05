@@ -54,9 +54,10 @@ test('updatePair: сдвиг конца при новом начале, ошиб
 });
 
 test('guessRepo и normRepo', () => {
-  assert.equal(m.guessRepo('sempik.github.io', '/life/'), 'sempik/sempik.github.io');
-  assert.equal(m.guessRepo('Sempik.GitHub.io', '/life/index.html'), 'sempik/sempik.github.io');
+  assert.equal(m.guessRepo('sempik.github.io', '/life/'), 'sempik/life');
+  assert.equal(m.guessRepo('Sempik.GitHub.io', '/life/index.html'), 'sempik/life');
   assert.equal(m.guessRepo('alice.github.io', '/myrepo/life/'), 'alice/myrepo');
+  assert.equal(m.guessRepo('sempik.github.io', '/'), 'sempik/sempik.github.io');
   assert.equal(m.guessRepo('localhost', '/life/'), '');
   assert.equal(m.guessRepo('evil.github.io.example.com', '/life/'), '');
   assert.equal(m.normRepo('https://github.com/Sempik/sempik.github.io.git'), 'Sempik/sempik.github.io');

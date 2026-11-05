@@ -25,7 +25,7 @@ export const APP_VERSION = '2026.11.05-2';
 
 const TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=Life%20manager';
 const BOTFATHER_URL = 'https://t.me/BotFather';
-const DEFAULT_REPO = 'sempik/sempik.github.io';
+const DEFAULT_REPO = 'sempik/life';
 const TG_API = 'https://api.telegram.org';
 
 export const TABS = [
@@ -166,7 +166,7 @@ export function guessRepo(hostname, pathname = '/') {
   if (!m) return '';
   const owner = m[1].toLowerCase();
   const segs = String(pathname || '/').split('/').filter(s => s && !/\.[a-z0-9]+$/i.test(s));
-  if (segs.length >= 2) return `${owner}/${segs[0]}`;
+  if (segs.length >= 1) return `${owner}/${segs[0]}`;
   return `${owner}/${owner}.github.io`;
 }
 
@@ -1468,7 +1468,7 @@ function applySetting(el) {
       const raw = el.value.trim();
       v = raw ? normRepo(raw) : '';
       if (raw && !v) {
-        toast('Нужен формат owner/repo, например sempik/sempik.github.io', { kind: 'warn' });
+        toast('Нужен формат owner/repo, например sempik/life', { kind: 'warn' });
         return;
       }
       break;
