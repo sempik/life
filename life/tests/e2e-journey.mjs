@@ -3,7 +3,8 @@
 //   первый запуск → мастер знакомства → пара по числителю + встреча → задача из быстрой
 //   строки «сдать лабу пт 18:00 !» → еда через поиск («гречка 200 г») + вода → вредная
 //   привычка «Курение» и «Хочется» → «Сегодня» показывает всё согласованно → перезагрузка
-//   (данные на месте) → светлая тема → все разделы (скриншоты).
+//   (данные на месте) → «Добавить» → светлая тема → все разделы (скриншоты) → часы на день
+//   ближайшей пары по числителю: пара «сейчас», задача просрочена, счётчик привычки идёт.
 // Часы страницы подменяются на «сегодня 10:00» (время идёт дальше), чтобы встреча в 16:00
 // была впереди при любом времени запуска.
 //
@@ -30,8 +31,8 @@ const STUB_HOSTS = new Set(['fonts.googleapis.com', 'fonts.gstatic.com']);
 const ROUTES = ['today', 'schedule', 'tasks', 'food', 'habits', 'stats', 'sources', 'settings'];
 
 /** «Сегодня 10:00» в зоне tz как Date (для clock.install). */
-function todayAt(tz, hm = '10:00') {
-  const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+function todayAt(tz, hm = '10:00', day = '') {
+  const ymd = day || new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   // Ищем момент, у которого в зоне tz стенные часы = ymd hm (перебор смещений −14…+14 ч).
   const [y, m, d] = ymd.split('-').map(Number);
   const [hh, mm] = hm.split(':').map(Number);
@@ -406,6 +407,31 @@ async function stepReload(h) {
   await checkToday(h, 'после перезагрузки');
 }
 
+/** Часы → день ближайшей «Матанализ» (числитель) 10:30: пара идёт сейчас, задача просрочена. */
+async function stepNextWeek(h) {
+  h.step = 'next-week';
+  const occ = await h.store((store, d, a) => import('./js/lib/recur.js').then(r => {
+    const ev = store.all('events').find(e => e.title === a);
+    return r.nextOccurrence(ev, d.toMs(d.addDays(d.today(), 1)), store.settings)?.occDate;
+  }), 'Матанализ');
+  if (!h.expect(occ, 'нет следующего вхождения «Матанализ»')) return;
+  await h.context.clock.setSystemTime(todayAt(TZ, '11:00', occ));
+  await h.boot({ reload: true });
+  await h.nav('today');
+  const r = await h.evaluate(() => {
+    const root = document.querySelector('.p-today');
+    const t = s => root.querySelector(s)?.innerText.replace(/\s+/g, ' ').trim() || '';
+    return { hero: t('.td-hero'), plan: t('.td-plan'), tasks: t('.td-tasks-card'), week: t('.td-week'), habits: t('.td-habits-card') };
+  });
+  h.expect(/числитель/.test(r.week), `${occ}: неделя «${r.week}», ожидался числитель`);
+  h.expect(/Матанализ/.test(r.hero) && /Сейчас|идёт|ещё/i.test(r.hero), `${occ} 11:00: «Матанализ» не «сейчас»: «${r.hero.slice(0, 160)}»`);
+  h.expect(/Матанализ/.test(r.plan) && /ауд\. 305/.test(r.plan), `${occ}: пары нет в плане дня: «${r.plan.slice(0, 200)}»`);
+  h.expect(/Сдать лабу/.test(r.tasks) && /просроч/i.test(r.tasks), `${occ}: задача не просрочена на «Сегодня»: «${r.tasks}»`);
+  h.expect(/Курение/.test(r.habits) && /\d+ д/.test(r.habits), `${occ}: счётчик «Курение»: «${r.habits}»`);
+  await h.shot('40-next-week-today');
+  await h.overflow('следующая неделя');
+}
+
 /** Шторка «Добавить»: каждая кнопка открывает свой раздел; вода — с «Отменить». */
 async function stepQuickAdd(h) {
   h.step = 'quick-add';
@@ -551,6 +577,7 @@ async function main() {
         await stepPages(h, 'light');
         h.step = 'contrast-light';
         for (const id of ROUTES) { await h.goto(id); await contrast(h, `светлая #/${id}`); }
+        await stepNextWeek(h);
       } catch (err) {
         h.error('scenario', `сценарий прерван: ${err?.stack || err}`);
         await h.shot('zz-failure').catch(() => {});
