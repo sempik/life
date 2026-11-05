@@ -4,7 +4,6 @@
   "description": "Расписание и пары, задачи, питание, вода, привычки и напоминания. Работает офлайн.",
   "lang": "ru",
   "dir": "ltr",
-  "id": "./",
   "start_url": "./#/today",
   "scope": "./",
   "display": "standalone",

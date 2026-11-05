@@ -77,9 +77,9 @@
   --on-text: #ffffff;
   --accent: #2f5fd0;
   --accent-soft: rgba(47, 95, 208, 0.13);
-  --ok: #1b8a4b;
+  --ok: #187a42;
   --ok-soft: rgba(27, 138, 75, 0.12);
-  --warn: #a96a00;
+  --warn: #935f00;
   --warn-soft: rgba(201, 132, 0, 0.14);
   --bad: #cc3b33;
   --bad-soft: rgba(204, 59, 51, 0.11);
@@ -111,9 +111,9 @@
     --on-text: #ffffff;
     --accent: #2f5fd0;
     --accent-soft: rgba(47, 95, 208, 0.13);
-    --ok: #1b8a4b;
+    --ok: #187a42;
     --ok-soft: rgba(27, 138, 75, 0.12);
-    --warn: #a96a00;
+    --warn: #935f00;
     --warn-soft: rgba(201, 132, 0, 0.14);
     --bad: #cc3b33;
     --bad-soft: rgba(204, 59, 51, 0.11);
@@ -252,6 +252,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
   padding: 4px max(var(--gutter), var(--safe-right)) calc(var(--tabbar-h) + var(--safe-bottom) + 28px) max(var(--gutter), var(--safe-left));
 }
 .view:focus { outline: none; }
+.view-root:has(.fab) { padding-bottom: 72px; }
 
 .tabbar {
   position: fixed;
