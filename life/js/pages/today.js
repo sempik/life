@@ -817,7 +817,9 @@ function remItem(r, ctx) {
   // Дайджест — одной строкой (его текст длинный и меняется в течение дня).
   let body = r.kind === 'digest' ? 'сводка дня' : r.body;
   // Текст задачи посчитан на момент показа («Срок: сегодня…»); в списке — относительно сегодня.
-  const task = r.kind === 'task' && r.refId ? store.get('tasks', r.refId) : null;
+  // В очереди уведомлений нет refId — id задачи берём из ключа «task:<id>:<срок>:…».
+  const taskId = r.kind === 'task' ? r.refId || String(r.key || '').split(':')[1] : '';
+  const task = taskId ? store.get('tasks', taskId) : null;
   if (task && isYmd(task.due) && typeof body === 'string' && body.startsWith('Срок:')) {
     const fresh = `Срок: ${fmtDayLabel(task.due, ctx.t).toLowerCase()}${isHm(task.dueTime) ? ` в ${task.dueTime}` : ''}`;
     body = [fresh, ...body.split(' · ').slice(1)].join(' · ');

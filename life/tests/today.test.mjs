@@ -129,6 +129,15 @@ test('pickTasks: просроченные, сегодня, важные без �
   assert.deepEqual(r.today.map(t => t.id), ['tEarly', 'tLate', 'tNoTimeUrgent', 'tNoTime']);
   assert.deepEqual(r.important.map(t => t.id), ['imp2', 'imp1']);
   assert.deepEqual(r.done.map(t => t.id), ['doneOverdue', 'doneToday']);
+  // «Скоро» — сроки на завтра/послезавтра, по дате и времени; дальше — нет.
+  assert.deepEqual(r.soon.map(t => t.id), ['future']);
+  const s2 = T.pickTasks([
+    { id: 'far', due: addDays(D, 3), done: false },
+    { id: 'tmrLate', due: addDays(D, 1), dueTime: '18:00', done: false },
+    { id: 'tmrEarly', due: addDays(D, 1), dueTime: '09:00', done: false },
+    { id: 'tmrDone', due: addDays(D, 1), done: true, doneAt: now },
+  ], D);
+  assert.deepEqual(s2.soon.map(t => t.id), ['tmrEarly', 'tmrLate']);
 });
 
 test('collectAlerts: скрытые и устаревшие расхождения, дубли, порядок изменений', () => {

@@ -81,7 +81,7 @@
   --ok-soft: rgba(27, 138, 75, 0.12);
   --warn: #935f00;
   --warn-soft: rgba(201, 132, 0, 0.14);
-  --bad: #cc3b33;
+  --bad: #c2352e;
   --bad-soft: rgba(204, 59, 51, 0.11);
   --bad-strong: #c8322b;
   --info: #1f6fbf;
@@ -115,7 +115,7 @@
     --ok-soft: rgba(27, 138, 75, 0.12);
     --warn: #935f00;
     --warn-soft: rgba(201, 132, 0, 0.14);
-    --bad: #cc3b33;
+    --bad: #c2352e;
     --bad-soft: rgba(204, 59, 51, 0.11);
     --bad-strong: #c8322b;
     --info: #1f6fbf;
@@ -461,7 +461,9 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
   display: flex;
   flex-direction: column;
   gap: 16px;
-  animation: page-in 0.28s var(--ease) both;
+  /* backwards, не both: после анимации transform не остаётся (иначе .fab внутри страницы
+     «прилипает» к странице вместо экрана — transform создаёт новый containing block). */
+  animation: page-in 0.28s var(--ease) backwards;
 }
 @keyframes page-in { from { opacity: 0; transform: translateY(8px); } }
 
@@ -1472,7 +1474,7 @@ html.sheet-open .toasts { bottom: calc(var(--safe-bottom) + 84px); }
   background: var(--surface-2);
   border-left: 3px solid var(--tc, var(--line-2));
 }
-.tl-item.past { opacity: 0.5; }
+.tl-item.past { opacity: 0.8; }
 .tl-item.now > .tl-time + * { box-shadow: inset 0 0 0 1px var(--tc, var(--line-2)); background: var(--surface-3); }
 .tl-item.now .tl-time { color: var(--text); font-weight: 600; }
 .tl-item[data-act], .tl-item > [data-act] { cursor: pointer; }
@@ -1587,7 +1589,7 @@ html.sheet-open .toasts { bottom: calc(var(--safe-bottom) + 84px); }
 .wg-ev:hover { filter: brightness(1.12); }
 .wg-ev b, .wg-ev .wg-title { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wg-ev small, .wg-ev .wg-sub { display: block; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wg-ev.past { opacity: 0.55; }
+.wg-ev.past { opacity: 0.8; }
 .wg-now {
   position: absolute;
   left: 0;

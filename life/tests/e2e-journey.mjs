@@ -378,7 +378,8 @@ async function checkToday(h, label) {
   h.expect(!r.welcome, `${label}: при данных показан экран первого запуска`);
   const parityToday = await h.store((store, d) => d.weekParity(d.today(), store.settings.semesterStart));
   const dow = await h.store((store, d) => d.isoDow(d.today()));
-  const cls = /Матанализ/.test(r.plan + r.hero);
+  // «Потом» (ПК) может показывать пару следующей недели — смотрим только план дня.
+  const cls = /Матанализ/.test(r.plan);
   if (parityToday === 'odd' && dow === (await h.store(store => store.all('events').find(e => e.title === 'Матанализ')?.recur?.days?.[0]))) {
     h.expect(cls, `${label}: сегодня числитель, а пары нет на «Сегодня»`);
   } else h.expect(!cls, `${label}: сегодня знаменатель, а пара по числителю на «Сегодня»`);
