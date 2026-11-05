@@ -15,7 +15,7 @@ import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { run } from './e2e.mjs';
+import { run, IGNORED_CONSOLE } from './e2e.mjs';
 
 const args = process.argv.slice(2);
 const argVal = (name, def = '') => {
@@ -126,9 +126,15 @@ async function checkTargets(h, where) {
 const OFF_PRODUCTS = {
   '4607001771234': { code: '4607001771234', product_name_ru: 'Сырок тестовый в шоколаде', brands: 'Е2Е-молоко', nutriments: { 'energy-kcal_100g': 410, proteins_100g: 8, fat_100g: 26, carbohydrates_100g: 35 }, serving_quantity: 40 },
   '4600000000024': { code: '4600000000024', product_name: 'Загадочный продукт', brands: 'Без этикетки', nutriments: {} },
+  '4603333333331': { code: '4603333333331', product_name_ru: 'Кефир камерный 2,5%', nutriments: { 'energy-kcal_100g': 53, proteins_100g: 3, fat_100g: 2.5, carbohydrates_100g: 4 }, serving_quantity: 250 },
 };
 
+// Chrome сам пишет в консоль о любом ответе ≥ 400 на fetch — для OFF это ожидаемо
+// (404 = «штрихкод не найден», 503 — проверка ошибки); свой сервер харнесс ловит отдельно.
+const OFF_CONSOLE = /^Failed to load resource: the server responded with a status of (404|503)\b/;
+
 async function routeOFF(h) {
+  if (!IGNORED_CONSOLE.includes(OFF_CONSOLE)) IGNORED_CONSOLE.push(OFF_CONSOLE);
   const log = [];
   await h.page.route('https://world.openfoodfacts.org/**', async route => {
     const u = new URL(route.request().url());
@@ -336,6 +342,7 @@ async function checkSearchLists(h) {
   await h.goto('food');
   await openSearch(h, '.p-food [data-act="add-meal"][data-meal="breakfast"]');
   expect(h, (await sheetTitle(h)) === 'Завтрак', `заголовок: ${await sheetTitle(h)}`);
+  expect(h, (await top(h).locator('.fs-tabs .on').getAttribute('data-tab')) === 'recent', 'по умолчанию не «Недавние»');
   // Недавние: гречка с «обычно 150 г».
   const recent = rowBy(h, 'Гречка варёная');
   expect(h, /обычно 150 г/.test(await recent.locator('.fs-row-sub').textContent()), 'в «Недавних» нет «обычно 150 г»');
@@ -618,6 +625,7 @@ async function checkDateNav(h) {
   await h.goto('food');
   const t = await todayYmd(h);
   const y = await inPage(h, (s, d) => d.addDays(d.today(), -1));
+  await inPage(h, (s, d, n, date) => s.put('water', { date, time: '10:00', ml: 200 }), y);
   await h.page.locator('.p-food [data-act="prev"]').click();
   await h.settle(120);
   expect(h, (await hash(h)).includes(`date=${y}`), `после «назад»: ${await hash(h)}`);
@@ -746,6 +754,8 @@ async function checkOFF(h) {
   } finally {
     await h.context.setOffline(false).catch(() => {});
     await h.page.unroute('https://world.openfoodfacts.org/**').catch(() => {});
+    const i = IGNORED_CONSOLE.indexOf(OFF_CONSOLE);
+    if (i >= 0) IGNORED_CONSOLE.splice(i, 1);
   }
 }
 
@@ -800,6 +810,8 @@ async function checkBarcodeManual(h) {
     await h.closeSheets();
   } finally {
     await h.page.unroute('https://world.openfoodfacts.org/**').catch(() => {});
+    const i = IGNORED_CONSOLE.indexOf(OFF_CONSOLE);
+    if (i >= 0) IGNORED_CONSOLE.splice(i, 1);
   }
 }
 
@@ -853,11 +865,12 @@ async function checkBarcodeCamera(h) {
     expect(h, (await h.evaluate(() => window.__scan.tracks.filter(t => t.readyState === 'live').length)) === 0, '«К поиску» не выключил камеру');
     await top(h).locator('.fs-tools [data-fs="scan"]').click();
     await h.page.waitForFunction(() => window.__scan.tracks.filter(t => t.readyState === 'live').length === 1, null, { timeout: 5e3 });
-    await h.evaluate(() => { window.__scan.code = '4607001771234'; });
+    await h.evaluate(() => { window.__scan.code = '4603333333331'; });
     await top(h).locator('.fs-prod-name').waitFor({ timeout: 5e3 });
+    expect(h, (await top(h).locator('.fs-prod-name').textContent()) === 'Кефир камерный 2,5%' && (await top(h).locator('.fs-grams').inputValue()) === '250', 'распознанный код → не та порция');
     s = await h.evaluate(() => ({ live: window.__scan.tracks.filter(t => t.readyState === 'live').length }));
     expect(h, s.live === 0, 'после распознавания камера не выключилась');
-    expect(h, log.some(u => u.includes('/api/v2/product/4607001771234.json')), 'распознанный код не искался в OFF');
+    expect(h, log.some(u => u.includes('/api/v2/product/4603333333331.json')), 'распознанный код не искался в OFF');
     await h.closeSheets();
 
     // 3) Камера запрещена → понятное сообщение, ручной ввод остаётся.
@@ -871,6 +884,8 @@ async function checkBarcodeCamera(h) {
   } finally {
     await h.evaluate(() => { delete window.BarcodeDetector; }).catch(() => {});
     await h.page.unroute('https://world.openfoodfacts.org/**').catch(() => {});
+    const i = IGNORED_CONSOLE.indexOf(OFF_CONSOLE);
+    if (i >= 0) IGNORED_CONSOLE.splice(i, 1);
   }
 }
 
@@ -903,7 +918,7 @@ async function checkDemo(h) {
     badges: document.querySelectorAll('.fd-weight .fd-deltas .badge').length,
     spark: !!document.querySelector('.fd-spark-line'),
   }));
-  expect(h, r.ring === '1 130' && r.items === 4 && r.water === '800', `демо сегодня: ${JSON.stringify(r)}`);
+  expect(h, r.ring?.replace(/\s/g, ' ') === '1 130' && r.items === 4 && r.water === '800', `демо сегодня: ${JSON.stringify(r)}`);
   expect(h, r.bars === 7 && /^71,4/.test(r.kg) && r.badges === 2 && r.spark, `демо неделя/вес: ${JSON.stringify(r)}`);
   await checkTargets(h, 'демо');
   await shot(h, 'demo');
@@ -918,6 +933,8 @@ async function checkDemo(h) {
 
   // Недавние: демо-блюдо «как в прошлый раз».
   await openSearch(h);
+  await top(h).locator('[data-fs="tab"][data-tab="recent"]').click();
+  await h.settle(60);
   const borsch = rowBy(h, 'Борщ со сметаной');
   expect(h, await borsch.count() === 1, 'в «Недавних» нет борща');
   await borsch.locator('.fs-pick').click();

@@ -162,6 +162,11 @@ function derivedProduct(m) {
   };
 }
 
+/** Запрос без окончаний: «бананы» → «банан», «котлеты куриные» → «котлет курин» (как в matchFood). */
+function stemQuery(q) {
+  return String(q || '').split(' ').map(w => (w.length > 4 ? w.replace(/(ами|ями|ов|ев|ей|ы|и|а|я|у|ю|е|о)$/, '') : w)).join(' ');
+}
+
 /** Убрать из результатов встроенные продукты, которые уже есть в «моих» (тот же id). */
 function dedupeResults(items) {
   const seen = new Set();
@@ -1149,7 +1154,12 @@ export function openFoodSearch(opts = {}) {
     const parsed = parseFoodText(q);
     const query = parsed.query || q;
     const products = store.all('products');
-    const local = dedupeResults(searchFoods(query, { limit: 30, extra: products }));
+    let local = dedupeResults(searchFoods(query, { limit: 30, extra: products }));
+    // «бананы», «2 банана» → «банан»: как matchFood, пробуем без окончаний.
+    if (!local.length) {
+      const stem = stemQuery(query);
+      if (stem !== query) local = dedupeResults(searchFoods(stem, { limit: 30, extra: products }));
+    }
     const parts = [];
 
     if (parsed.kcal != null && parsed.query) {
@@ -1680,5 +1690,5 @@ export default {
 /** Для юнит-тестов (tests/food.test.mjs). */
 export const __test = {
   parseNum, inNum, defaultTime, glassModel, weightEntries, weightDelta, periodLabel, deltaTone, fmtDelta,
-  recentFoods, derivedProduct, dedupeResults, portionChips, productRecord, stableProductId, chartModel, sparkModel,
+  recentFoods, derivedProduct, dedupeResults, stemQuery, portionChips, productRecord, stableProductId, chartModel, sparkModel,
 };

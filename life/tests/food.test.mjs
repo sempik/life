@@ -191,3 +191,10 @@ test('sparkModel: только последние 30 дней, плоский р
   assert.ok(!/NaN/.test(flat.line));
   assert.equal(T.sparkModel([{ date: D, kg: 70 }], D, 30), null);
 });
+
+test('stemQuery: окончания множественного числа для поиска', () => {
+  assert.equal(T.stemQuery('бананы'), 'банан');
+  assert.equal(T.stemQuery('банана'), 'банан');
+  assert.equal(T.stemQuery('котлеты куриные'), 'котлет курин');
+  assert.equal(T.stemQuery('сыр'), 'сыр', 'короткие слова не трогаем');
+});

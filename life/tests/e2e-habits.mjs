@@ -61,6 +61,13 @@ const card = (h, id) => h.page.locator(`.p-habits [data-card="${id}"]`);
 const sheetTitle = h => h.evaluate(() => [...document.querySelectorAll('.sheet-layer')].pop()?.querySelector('.sheet-title')?.textContent.trim() || '');
 const topSheet = h => h.page.locator('.sheet-layer').last();
 
+/** Клик с прокруткой к центру экрана: внизу страницы элементы перекрывают нижняя панель и тосты. */
+async function tap(h, loc) {
+  await h.clearToasts();
+  await loc.evaluate(el => el.scrollIntoView({ block: 'center', inline: 'nearest' }));
+  await loc.click();
+}
+
 async function waitSheet(h, cls) {
   await h.page.waitForSelector(`.sheet-layer.open .sheet.${cls}`, { timeout: 5e3 });
   await h.settle(120);
@@ -500,7 +507,7 @@ async function checkDetails(h) {
   await more.locator('[data-act="d-more"]').click();
   await h.settle(150);
   expect(h, (await more.locator('.hb-log').count()) === 21 && !(await more.locator('[data-act="d-more"]').count()), '«Показать ещё» не показало все записи');
-  const streakKpi = (await more.locator('.kpi').first().textContent()).replace(/\s+/g, ' ');
+  const streakKpi = (await more.locator('.kpi').first().innerText()).replace(/\s+/g, ' ');
   expect(h, /^21 день/.test(streakKpi.trim()), `серия после истории: «${streakKpi}»`);
   await closeTop(h);
   // Глубокая ссылка.
@@ -529,12 +536,12 @@ async function checkArchiveDelete(h) {
   expect(h, (await card(h, z.id).count()) === 0, 'архивная привычка в списке');
   const toggle = h.page.locator('.p-habits [data-act="arch-toggle"]');
   expect(h, /Архив\s*1/.test((await toggle.textContent()).trim()), 'нет раздела «Архив 1»');
-  await toggle.click();
+  await tap(h, toggle);
   await h.settle(150);
   expect(h, (await h.page.locator('.p-habits .hb-arch-item').count()) === 1, 'архив не раскрылся');
   await h.clearToasts();
   await shot(h, 'archive');
-  await h.page.locator(`.p-habits .hb-arch-item [data-act="restore"][data-id="${z.id}"]`).click();
+  await tap(h, h.page.locator(`.p-habits .hb-arch-item [data-act="restore"][data-id="${z.id}"]`));
   await h.settle(300);
   expect(h, (await card(h, z.id).count()) === 1, '«Вернуть» не вернуло привычку');
   // Удаление: отмена в подтверждении → ничего; «Удалить» → надгробие, записи остаются; «Отменить» → вернулась.
@@ -690,7 +697,7 @@ async function checkDemo(h) {
     await card(h, id).locator('[data-act="open"]').click();
     await waitSheet(h, 'sh-habit');
     const d = await topSheet(h).evaluate(el => ({
-      kpis: [...el.querySelectorAll('.kpi')].map(k => k.textContent.replace(/\s+/g, ' ').trim()),
+      kpis: [...el.querySelectorAll('.kpi')].map(k => k.innerText.replace(/\s+/g, ' ').trim()),
       slipCells: el.querySelectorAll('.hm-cell.slip').length,
       logs: el.querySelectorAll('.hb-log').length,
       more: !!el.querySelector('[data-act="d-more"]'),
@@ -700,7 +707,7 @@ async function checkDemo(h) {
       expect(h, d.logs === 4, `бросаю: записей ${d.logs}`);
     } else {
       expect(h, d.slipCells >= 2, `ограничиваю: дней с перебором ${d.slipCells}`);
-      expect(h, d.logs === 12 && !d.more, `ограничиваю: журнал ${d.logs}, «ещё» ${d.more}`);
+      expect(h, d.logs === 13 && !d.more, `ограничиваю: журнал ${d.logs}, «ещё» ${d.more}`);
     }
     await shot(h, name);
     await closeTop(h);

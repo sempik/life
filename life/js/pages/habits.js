@@ -561,7 +561,7 @@ function headSub(ctx, good, bad) {
 function segHtml(tab, all, good, bad) {
   const n = { all, good, bad };
   return html`<div class="seg hb-seg" role="tablist" aria-label="Какие привычки показать">
-    ${TABS.map(t => html`<button type="button" role="tab" class="${t.id === tab ? 'on' : ''}" aria-selected="${t.id === tab}" data-act="tab" data-tab="${t.id}">${t.label}<span class="hb-seg-n">${n[t.id]}</span></button>`)}
+    ${TABS.map(t => html`<button type="button" role="tab" class="${t.id === tab ? 'on' : ''}" aria-selected="${String(t.id === tab)}" data-act="tab" data-tab="${t.id}">${t.label}<span class="hb-seg-n">${n[t.id]}</span></button>`)}
   </div>`;
 }
 
@@ -606,7 +606,7 @@ function goodCard(h, ctx) {
   return html`<article class="card hb-card hb-good ${p.complete ? 'complete' : ''} ${p.scheduled ? '' : 'off-today'} ${cur?.flash === h.id ? 'hb-flash' : ''}" data-card="${h.id}" style="${colorStyle(h)}">
     <div class="hb-top">
       ${openBtn(h, meta)}
-      ${multi ? '' : html`<button type="button" class="check ok hb-check ${p.complete ? 'on' : ''}" data-act="toggle" data-id="${h.id}" aria-pressed="${p.complete}" aria-label="${p.complete ? 'Снять отметку' : 'Отметить'}: ${h.name}"></button>`}
+      ${multi ? '' : html`<button type="button" class="check ok hb-check ${p.complete ? 'on' : ''}" data-act="toggle" data-id="${h.id}" aria-pressed="${String(p.complete)}" aria-label="${p.complete ? 'Снять отметку' : 'Отметить'}: ${h.name}"></button>`}
     </div>
     ${multi ? stepHtml(h, p) : ''}
     <div class="hb-week" role="list" aria-label="Последние 7 дней">
@@ -665,11 +665,11 @@ function quitCard(h, ctx) {
 }
 
 function stat(value, label, cls = '') {
-  return html`<div class="hb-stat ${cls}"><b class="num">${value}</b><span>${label}</span></div>`;
+  return html`<div class="hb-stat ${cls}"><b class="num">${value}</b> <span>${label}</span></div>`;
 }
 
 function cleanHtml(ct, opts) {
-  return cleanParts(ct, opts).map(([n, u]) => html`<span class="hb-cu"><b class="num">${n}</b><small>${u}</small></span>`);
+  return cleanParts(ct, opts).map(([n, u], i) => html`${i ? ' ' : ''}<span class="hb-cu"><b class="num">${n}</b> <small>${u}</small></span>`);
 }
 
 /** Живой блок: «чистое» время + ближайшая веха. */
@@ -768,7 +768,7 @@ function emptyHtml(kind) {
 function archiveHtml(list) {
   const open = !!cur?.archiveOpen;
   return html`<section class="hb-archive">
-    <button type="button" class="hb-arch-toggle" data-act="arch-toggle" aria-expanded="${open}">
+    <button type="button" class="hb-arch-toggle" data-act="arch-toggle" aria-expanded="${String(open)}">
       ${icon('inbox', 18)}<span>Архив</span><span class="badge">${list.length}</span><span class="spacer"></span>${icon(open ? 'chevron-up' : 'chevron-down', 18)}
     </button>
     ${open ? html`<div class="list hb-arch-list">
@@ -1162,7 +1162,7 @@ function detailFooter(h) {
 }
 
 const kpi = (value, label, cls = '') => html`<div class="kpi ${cls}"><div class="kpi-value">${value}</div><div class="kpi-label">${label}</div></div>`;
-const kv = (n, unit) => html`${n}<small>${unit}</small>`;
+const kv = (n, unit) => html`${n} <small>${unit}</small>`;
 
 function detailBody(h, shown = LOGS_PAGE) {
   const t = todayYmd(), now = Date.now();
@@ -1473,14 +1473,14 @@ function formInner(fv, formId, editing) {
   const good = fv.kind !== 'bad';
   const e = fv.errors || {};
   const id = n => `${formId}-${n}`;
-  const segBtn = (f, v, label, on) => html`<button type="button" class="${on ? 'on' : ''}" data-f="${f}" data-v="${v}" aria-pressed="${on}">${label}</button>`;
+  const segBtn = (f, v, label, on) => html`<button type="button" class="${on ? 'on' : ''}" data-f="${f}" data-v="${v}" aria-pressed="${String(on)}">${label}</button>`;
   const palette = good ? EMOJI_GOOD : EMOJI_BAD;
   const parts = [];
 
   if (!editing) {
     parts.push(html`<div class="field full hb-f-tpls">
       <div class="field-label">Шаблоны</div>
-      <div class="chips scroll hb-tpl-row">${TEMPLATES[fv.kind].map((t, i) => html`<button type="button" class="chip ${fv.tpl === i ? 'on' : ''}" data-f="tpl" data-v="${i}" aria-pressed="${fv.tpl === i}"><span aria-hidden="true">${t.emoji}</span>${t.name}</button>`)}</div>
+      <div class="chips scroll hb-tpl-row">${TEMPLATES[fv.kind].map((t, i) => html`<button type="button" class="chip ${fv.tpl === i ? 'on' : ''}" data-f="tpl" data-v="${i}" aria-pressed="${String(fv.tpl === i)}"><span aria-hidden="true">${t.emoji}</span>${t.name}</button>`)}</div>
     </div>`);
   }
 
@@ -1491,7 +1491,7 @@ function formInner(fv, formId, editing) {
   </div>`);
 
   parts.push(fieldWrap('name', html`Название<span class="req" aria-hidden="true"> *</span>`, html`<div class="hb-f-ident">
-      <button type="button" class="hb-f-emoji" data-f="emoji-toggle" aria-expanded="${fv.emojiOpen}" aria-label="Выбрать эмодзи">${fv.emoji || defaultEmoji(fv.kind)}</button>
+      <button type="button" class="hb-f-emoji" data-f="emoji-toggle" aria-expanded="${String(fv.emojiOpen)}" aria-label="Выбрать эмодзи">${fv.emoji || defaultEmoji(fv.kind)}</button>
       <input class="input" id="${id('name')}" name="name" type="text" value="${fv.name}" maxlength="60" autocomplete="off" placeholder="${good ? 'Например, зарядка' : 'Например, курение'}" required aria-required="true">
     </div>
     ${fv.emojiOpen ? html`<div class="hb-f-pal">
@@ -1505,7 +1505,7 @@ function formInner(fv, formId, editing) {
     const days = new Set(fv.days);
     const preset = describeDays(fv.days);
     parts.push(fieldWrap('days', 'Дни', html`<div class="days" role="group" aria-label="Дни недели">
-        ${DOW_SHORT.map((d, i) => html`<button type="button" class="chip day ${days.has(i + 1) ? 'on' : ''}" data-f="day" data-v="${i + 1}" aria-pressed="${days.has(i + 1)}">${d}</button>`)}
+        ${DOW_SHORT.map((d, i) => html`<button type="button" class="chip day ${days.has(i + 1) ? 'on' : ''}" data-f="day" data-v="${i + 1}" aria-pressed="${String(days.has(i + 1))}">${d}</button>`)}
       </div>
       <div class="chips hb-f-presets">
         ${[['all', 'Каждый день', 'каждый день'], ['weekdays', 'Будни', 'по будням'], ['weekend', 'Выходные', 'по выходным']].map(([v, l, d]) => html`<button type="button" class="chip sm ${fv.days.length && preset === d ? 'on' : ''}" data-f="days-preset" data-v="${v}">${l}</button>`)}
@@ -1534,8 +1534,8 @@ function formInner(fv, formId, editing) {
   }
 
   parts.push(fieldWrap('color', 'Цвет', html`<div class="swatches" role="group" aria-label="Цвет">
-      <button type="button" class="swatch none ${fv.color ? '' : 'on'}" data-f="color" data-v="" aria-pressed="${!fv.color}" aria-label="Без цвета" title="Без цвета"></button>
-      ${COLORS.map(c => html`<button type="button" class="swatch ${c === fv.color ? 'on' : ''}" data-f="color" data-v="${c}" style="--sw:${c}" aria-pressed="${c === fv.color}" aria-label="Цвет ${c}"></button>`)}
+      <button type="button" class="swatch none ${fv.color ? '' : 'on'}" data-f="color" data-v="" aria-pressed="${String(!fv.color)}" aria-label="Без цвета" title="Без цвета"></button>
+      ${COLORS.map(c => html`<button type="button" class="swatch ${c === fv.color ? 'on' : ''}" data-f="color" data-v="${c}" style="--sw:${c}" aria-pressed="${String(c === fv.color)}" aria-label="Цвет ${c}"></button>`)}
     </div>`, { full: true, grouped: true }));
 
   parts.push(html`<div class="field full check-field hb-f-remind" data-name="remindOn">
@@ -1607,7 +1607,7 @@ function quickItem(h, ctx) {
     } else {
       const sk = streak(h, logs, ctx.t).current;
       sub = p.complete ? html`<span class="text-ok">готово${sk ? ` · серия ${pluralN(sk, DAY_FORMS)}` : ''}</span>` : sk ? `серия ${pluralN(sk, DAY_FORMS)}` : describeDays(h.days);
-      acts = html`<button type="button" class="check ok ${p.complete ? 'on' : ''}" data-act="q-toggle" data-id="${h.id}" aria-pressed="${p.complete}" aria-label="${p.complete ? 'Снять отметку' : 'Отметить'}: ${name}"></button>`;
+      acts = html`<button type="button" class="check ok ${p.complete ? 'on' : ''}" data-act="q-toggle" data-id="${h.id}" aria-pressed="${String(p.complete)}" aria-label="${p.complete ? 'Снять отметку' : 'Отметить'}: ${name}"></button>`;
     }
   } else if (isQuit(h)) {
     cls = 'quit';
