@@ -469,10 +469,10 @@ function renderPage(root, params) {
       </div>
     </div>
     <nav class="tabs src-tabs" role="tablist" aria-label="Источники и изменения">
-      <button type="button" role="tab" class="${tab === 'sources' ? 'on' : ''}" aria-selected="${tab === 'sources'}" data-act="tab" data-tab="sources">
+      <button type="button" role="tab" class="${tab === 'sources' ? 'on' : ''}" aria-selected="${String(tab === 'sources')}" data-act="tab" data-tab="sources">
         ${icon('globe', 18)}<span>Источники</span>${vm.sources.length ? html`<span class="badge">${vm.sources.length}</span>` : ''}
       </button>
-      <button type="button" role="tab" class="${tab === 'changes' ? 'on' : ''}" aria-selected="${tab === 'changes'}" data-act="tab" data-tab="changes">
+      <button type="button" role="tab" class="${tab === 'changes' ? 'on' : ''}" aria-selected="${String(tab === 'changes')}" data-act="tab" data-tab="changes">
         ${icon('bell', 18)}<span>Изменения</span>${vm.badge ? html`<span class="badge solid src-unseen" aria-label="${pluralN(vm.badge, ['непрочитанное', 'непрочитанных', 'непрочитанных'])}">${vm.badge > 99 ? '99+' : vm.badge}</span>` : ''}
       </button>
     </nav>
@@ -534,7 +534,7 @@ function introCard(open, vm) {
   else if (st?.botLastRun) bot = html`<span>Последний запуск — ${fmtRelative(st.botLastRun, vm.now)}</span>${st.botError ? html`<span class="text-bad"> · ошибка: ${st.botError}</span>` : ''}`;
   else bot = html`<span>Бот ещё не запускался</span>`;
   return html`<section class="card src-intro ${open ? 'open' : ''}">
-    <button type="button" class="src-intro-head" data-act="intro" aria-expanded="${open}" aria-controls="src-intro-body">
+    <button type="button" class="src-intro-head" data-act="intro" aria-expanded="${String(open)}" aria-controls="src-intro-body">
       <span class="src-intro-ico">${icon('info', 18)}</span>
       <span class="src-intro-title">Как работает сверка</span>
       <span class="src-intro-chev">${icon('chevron-down', 18)}</span>
@@ -670,10 +670,10 @@ function changesTab(vm, params) {
   } else {
     feed = html`
       ${keys.size > 1 ? html`<div class="chips scroll src-filter" role="toolbar" aria-label="Фильтр по источнику">
-        <button type="button" class="chip ${filter ? '' : 'on'}" data-act="filter" data-filter="" aria-pressed="${!filter}">Все<span class="src-chip-n">${vm.changes.length}</span></button>
+        <button type="button" class="chip ${filter ? '' : 'on'}" data-act="filter" data-filter="" aria-pressed="${String(!filter)}">Все<span class="src-chip-n">${vm.changes.length}</span></button>
         ${order.map(k => {
           const e = keys.get(k);
-          return html`<button type="button" class="chip ${filter === k ? 'on' : ''}" data-act="filter" data-filter="${k}" aria-pressed="${filter === k}">
+          return html`<button type="button" class="chip ${filter === k ? 'on' : ''}" data-act="filter" data-filter="${k}" aria-pressed="${String(filter === k)}">
             ${e.unseen ? html`<span class="dot src-chip-dot" aria-hidden="true"></span>` : ''}${e.label}<span class="src-chip-n">${e.count}</span></button>`;
         })}
       </div>` : ''}
@@ -781,6 +781,8 @@ function onChange(e) {
   const src = store.get('sources', el.dataset.id);
   if (!src) return;
   store.put('sources', { id: src.id, enabled: el.checked });
+  // Роутер откладывает перерисовку, пока фокус в поле ввода (и на переключателе тоже), — рисуем сами.
+  rerender();
   toast(el.checked ? `«${src.name}» снова проверяется` : `«${src.name}» выключен: не проверяется и не показывается в расписании`);
 }
 
@@ -1072,7 +1074,7 @@ export function openSourceForm(source = null, { preset = null } = {}) {
   const intro = isNew ? html`<div class="src-presets">
       <div class="src-presets-label">Откуда расписание</div>
       <div class="chips src-presets-row" role="group" aria-label="Готовые варианты">
-        ${PRESETS.map(p => html`<button type="button" class="chip ${p0?.id === p.id ? 'on' : ''}" data-preset="${p.id}" aria-pressed="${p0?.id === p.id}">${icon(p.icon, 16)}${p.short}</button>`)}
+        ${PRESETS.map(p => html`<button type="button" class="chip ${p0?.id === p.id ? 'on' : ''}" data-preset="${p.id}" aria-pressed="${String(p0?.id === p.id)}">${icon(p.icon, 16)}${p.short}</button>`)}
       </div>
       <div class="src-howto" ${p0 ? '' : raw('hidden')}>${p0 ? howto(p0) : ''}</div>
     </div>` : '';
