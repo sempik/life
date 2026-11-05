@@ -48,6 +48,8 @@ const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0);
 /** «+1,2» / «−0,4» / «0». */
 export const signed = (n, d = 0) => (round(n, d) > 0 ? '+' : '') + fmtNum(n, d);
 const pct = r => Math.round(r * 100);
+/** Вода: до литра — в мл («750 мл»), дальше — в литрах («1,7 л»). → { v, u } */
+export const fmtWater = ml => (ml < 1000 ? { v: fmtNum(ml), u: 'мл' } : { v: fmtNum(ml / 1000, 1), u: 'л' });
 const shortDate = d => fmtDate(d, { short: true });
 
 export function parsePeriod(v) {
@@ -567,7 +569,7 @@ function card({ id, ic, title, insight = '', body, table = false, extra = '' }) 
 function cardEmpty(text, action = null) {
   return html`<div class="st-empty">
     <p>${text}</p>
-    ${action ? html`<button type="button" class="btn sm" data-act="${action.act}">${icon(action.icon || 'plus', 16)}${action.label}</button>` : ''}
+    ${action ? html`<button type="button" class="btn" data-act="${action.act}">${icon(action.icon || 'plus', 16)}${action.label}</button>` : ''}
   </div>`;
 }
 
@@ -609,7 +611,7 @@ function kpisHtml(c) {
     }));
     items.push(kpi({
       to: 'water', ic: 'droplet', label: 'Вода',
-      value: nut.water != null ? fmtNum(nut.water / 1000, 1) : '—', unit: nut.water != null ? 'л' : '',
+      value: nut.water != null ? fmtWater(nut.water).v : '—', unit: nut.water != null ? fmtWater(nut.water).u : '',
       sub: nut.water != null ? `в день${num(goals.water) ? ` · ${pct(nut.water / goals.water)}% нормы` : ''}` : 'нет записей',
       spark: sparkline({ values: c.days.map(d => (d.drinks ? d.water : null)), ariaLabel: 'Вода по дням' }),
     }));
@@ -647,9 +649,9 @@ function kpisHtml(c) {
   if (c.mods.schedule) {
     const s = c.sch;
     items.push(kpi({
-      to: 'schedule', ic: 'calendar', label: 'Пары и встречи',
+      to: 'schedule', ic: 'calendar', label: 'Расписание',
       value: s.count ? fmtNum(s.studyWeekly, 1) : '—', unit: s.count ? 'ч' : '',
-      sub: s.count ? 'в неделю' : 'нет событий',
+      sub: s.count ? 'пар и встреч в неделю' : 'нет событий',
       spark: s.count ? sparkline({ values: seq(s.perDay, 0), ariaLabel: 'Часы событий по дням' }) : '',
     }));
   }
@@ -714,7 +716,8 @@ function waterCard(c) {
     tip: b => (b.value == null ? 'не отмечали' : `${fmtNum(b.value)} мл${B.unit === 'week' ? ' в день' : ''}`),
     note: b => (b.value != null && B.unit === 'week' ? `в среднем · ${pluralN(b.count, DAY_FORMS)} с записями` : ''),
   });
-  const insight = html`В среднем <b>${fmtNum(nut.water / 1000, 1)} л</b> в день${goal ? html` · норму выпил в <b>${nut.waterOk}</b> из ${pluralN(nut.daysWater, DAY_FORMS)}` : ''}.`;
+  const wv = fmtWater(nut.water);
+  const insight = html`В среднем <b>${wv.v} ${wv.u}</b> в день${goal ? html` · норму выпил в <b>${nut.waterOk}</b> из ${pluralN(nut.daysWater, DAY_FORMS)}` : ''}.`;
   const body = tables.has(id)
     ? dataTable({
       caption: 'Вода по дням',
@@ -1116,5 +1119,5 @@ export default {
 export const __test = {
   parsePeriod, periodRange, chartFrom, firstDate, makeBuckets, bucketTick, bucketLabel, dailyNutrition,
   nutritionSummary, bucketValues, weightEntries, movingAverage, weightTrend, trendText, goodHabitRate,
-  habitStats, scheduleStats, dueEndMs, taskStats, csvCell, toCsv, csvMeals, csvWater, csvWeight, csvHabits, signed,
+  habitStats, scheduleStats, dueEndMs, taskStats, fmtWater, csvCell, toCsv, csvMeals, csvWater, csvWeight, csvHabits, signed,
 };

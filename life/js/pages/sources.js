@@ -628,7 +628,7 @@ function sourceCard(src, vm) {
     err = html`<div class="alert bad src-err">${icon('alert', 18)}<div>${isCorsError(snap.error) ? `${CORS_HELP}.` : snap.error}</div></div>`;
   } else if (lateErr) {
     err = html`<div class="alert warn src-err">${icon('alert', 18)}<div>
-      Последняя проверка ${relAgo(lateErr.at, vm.now)} не удалась: ${isCorsError(lateErr.error) ? `${CORS_HELP}.` : lateErr.error}
+      <b>Не удалось обновить</b> (${relAgo(lateErr.at, vm.now)}). ${isCorsError(lateErr.error) ? `${CORS_HELP}.` : `${lateErr.error}.`}
       <span class="muted"> Показываю данные прошлой загрузки.</span>
     </div></div>`;
   }
@@ -1069,7 +1069,7 @@ function sourceFields(isNew) {
     jsonField('uid', 'Поле id', 'id'),
     jsonField('who', 'Поле «кто ведёт»', 'teacher'),
     // Страница
-    { name: 'match', label: 'Оставить строки, где есть', type: 'text', full: true, placeholder: 'ИВТ-21', show: ofKind('page'), hint: 'Оставить только строки, где есть, например, номер твоей группы: ИВТ-21. Можно регулярное выражение.' },
+    { name: 'match', label: 'Фильтр строк', type: 'text', full: true, placeholder: 'ИВТ-21', show: ofKind('page'), hint: 'Оставить только строки, где есть, например, номер твоей группы: ИВТ-21. Можно регулярное выражение.' },
     { name: 'b_start', label: 'Начать со строки', type: 'text', full: false, placeholder: 'Расписание', show: ofKind('page') },
     { name: 'b_end', label: 'Закончить перед', type: 'text', full: false, placeholder: 'Контакты', show: ofKind('page') },
     // Общее
@@ -1110,7 +1110,7 @@ export function openSourceForm(source = null, { preset = null } = {}) {
     </div>` : '';
 
   const handle = formSheet({
-    title: isNew ? 'Новый источник' : 'Источник',
+    title: isNew ? 'Новый источник' : 'Настройки источника',
     className: 'sh-sources sh-src-form',
     intro,
     fields: sourceFields(isNew),

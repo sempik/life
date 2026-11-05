@@ -78,6 +78,27 @@ export function fmtTick(v, step = 1) {
   return fmtNum(v, stepDigits(step));
 }
 
+/**
+ * Шкала столбцов от нуля: если верхнее деление сильно выше данных (≥ 20% пустоты),
+ * верх графика — данные + 10%, а деления выше него не рисуем (меньше пустого места).
+ */
+function zeroScale(maxV, opts) {
+  const sc = niceScale(0, maxV, opts);
+  if (sc.max > 0 && maxV > 0 && (sc.max - maxV) / sc.max >= 0.2) {
+    const top = maxV * 1.1;
+    return { ...sc, max: top, ticks: sc.ticks.filter(t => t <= top + 1e-9) };
+  }
+  return sc;
+}
+
+/** Подпись оси X у точки x: по центру, а у краёв — прижата внутрь (не вылезает в поле шкалы). */
+function xLabelPos(x, text, minX, maxX) {
+  const half = textWidth(text, TICK_FONT) / 2;
+  if (x - half < minX) return { x: Math.max(minX, x - 2), anchor: 'start' };
+  if (x + half > maxX) return { x: Math.min(maxX, x + 2), anchor: 'end' };
+  return { x, anchor: 'middle' };
+}
+
 /** Путь столбца со скруглённым верхом и прямым основанием. */
 function barPath(x, yTop, w, yBase, r = BAR_R) {
   const h = yBase - yTop;
@@ -147,7 +168,7 @@ export function barChart({
   const H = Math.max(compact ? 60 : 100, Math.round(height));
   const g = isNum(goal) && goal > 0 ? goal : null;
   const maxV = Math.max(...vals.filter(isNum), g || 0);
-  const scale = niceScale(0, maxV, { maxTicks: compact ? 3 : 5, integer });
+  const scale = zeroScale(maxV, { maxTicks: compact ? 3 : 5, integer });
   const tickText = scale.ticks.map(t => fmtTick(t, scale.step));
   const padL = Math.ceil(Math.max(...tickText.map(s => textWidth(s, TICK_FONT)))) + 10;
   const padR = 4, padT = compact ? 16 : 20, padB = ticks ? 24 : 6;
@@ -191,7 +212,11 @@ export function barChart({
       { x: x1 - w, y: gy + 4, anchor: 'end', tx: x1, ty: gy + 4 + FONT },
       { x: x0 + 4, y: gy - 5 - FONT, anchor: 'start', tx: x0 + 4, ty: gy - 5 },
     ].filter(c => c.y >= 0 && c.y + FONT <= yb - 2);
-    const pick = cands.find(c => !boxes.some(b => overlaps(b, { x: c.x, y: c.y, w, h: FONT + 2 })));
+    const bars = vals.map((v, i) => (v > 0 ? { x: cx(i) - bw / 2, y: y(v), w: bw, h: yb - y(v) } : null)).filter(Boolean);
+    const pick = cands.find(c => {
+      const box = { x: c.x, y: c.y, w, h: FONT + 2 };
+      return !boxes.some(b => overlaps(b, box)) && !bars.some(b => overlaps(b, box, 1));
+    });
     goalSvg = html`<line class="ch-goal" x1="${r1(x0)}" x2="${r1(x1)}" y1="${r1(gy)}" y2="${r1(gy)}"/>`;
     if (pick) goalSvg = html`${goalSvg}<text class="ch-goal-label" x="${r1(pick.tx)}" y="${r1(pick.ty)}" text-anchor="${pick.anchor}">${text}</text>`;
     else goalLegend = legend([{ name: text, kind: 'dash' }]);
@@ -245,7 +270,7 @@ export function stackedBars({
   if (!data.length || !totals.some(t => t > 0)) return emptyChart(empty, Math.min(height, 120));
   const W = Math.max(160, Math.round(width));
   const H = Math.max(100, Math.round(height));
-  const scale = niceScale(0, Math.max(...totals), { maxTicks: 5 });
+  const scale = zeroScale(Math.max(...totals), { maxTicks: 5 });
   const tickText = scale.ticks.map(t => fmtTick(t, scale.step));
   const padL = Math.ceil(Math.max(...tickText.map(s => textWidth(s, TICK_FONT)))) + 10;
   const x0 = padL, x1 = W - 4, yt = 20, yb = H - 24;
@@ -364,8 +389,10 @@ export function lineChart({
     </g>`;
   });
 
-  const xl = xTicks.filter(t => isNum(t.x) && t.x >= xa && t.x <= xb).map(t =>
-    html`<text class="ch-x" x="${r1(axisLabelX(sx(t.x), t.label, W))}" y="${r1(yb + 16)}" text-anchor="middle">${t.label}</text>`);
+  const xl = xTicks.filter(t => isNum(t.x) && t.x >= xa && t.x <= xb).map(t => {
+    const p = xLabelPos(sx(t.x), t.label, padL, W - 1);
+    return html`<text class="ch-x" x="${r1(p.x)}" y="${r1(yb + 16)}" text-anchor="${p.anchor}">${t.label}</text>`;
+  });
   const endLabel = labelled
     ? html`<text class="ch-val ch-end" x="${r1(sx(labelled.points.at(-1).x) + 9)}" y="${r1(sy(labelled.points.at(-1).y) + 4)}">${endText}</text>`
     : '';

@@ -584,6 +584,29 @@ async function checkCors(h) {
   expect(h, /не разрешает загрузку из браузера/.test(t), `CORS тост: «${t}»`);
   await shot(h, 'card-cors');
   await h.clearToasts();
+
+  // Сайт с удачным снимком стал недоступен: старые данные остаются, в карточке — плашка о неудаче.
+  const pid = await st(h, (store, host) => {
+    const s = store.all('sources').find(x => x.name === 'Пары (e2e)');
+    store.put('sources', { id: s.id, url: `${host}/moved.ics` });
+    return s.id;
+  }, CORS_HOST);
+  await h.settle(150);
+  await card(h, 'Пары (e2e)').locator('[data-act="refresh"]').click();
+  await waitToast(h, /Пары \(e2e\)/);
+  const late = await card(h, 'Пары (e2e)').evaluate(el => ({
+    ok: el.querySelector('.src-status')?.classList.contains('ok'),
+    warn: el.querySelector('.src-err.warn')?.textContent.replace(/\s+/g, ' ').trim() || '',
+  }));
+  expect(h, late.ok && /Не удалось обновить \(только что\)/.test(late.warn) && /прошлой загрузки/.test(late.warn), `неудача поверх старого снимка: ${JSON.stringify(late)}`);
+  await shot(h, 'card-late-error');
+  await st(h, (store, a) => store.put('sources', { id: a.id, url: a.url }), { id: pid, url: `${h.server.url}/__e2e/schedule.ics` });
+  await h.clearToasts();
+  await card(h, 'Пары (e2e)').locator('[data-act="refresh"]').click();
+  await waitToast(h, /Пары \(e2e\)/);
+  const gone = await card(h, 'Пары (e2e)').locator('.src-err').count();
+  expect(h, gone === 0, 'плашка о неудаче не пропала после удачного обновления');
+  await h.clearToasts();
 }
 
 /** CORS-прокси из справки: проверка адреса, сохранение, выключение. */
@@ -646,7 +669,7 @@ async function checkToggleEditDelete(h) {
   await card(h, name).locator('[data-act="edit"]').click();
   await waitSheet(h);
   const ttl = await h.page.locator(`${OPEN} .sheet-title`).textContent();
-  expect(h, ttl === 'Источник', `заголовок правки: ${ttl}`);
+  expect(h, ttl === 'Настройки источника', `заголовок правки: ${ttl}`);
   const presets = await h.page.locator(`${OPEN} [data-preset]`).count();
   expect(h, presets === 0, 'пресеты в форме правки');
   await shot(h, 'form-edit');
